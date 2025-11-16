@@ -66,7 +66,7 @@
 | `START_YYYYMMDD` | 학기 시작일, 예: `20240902` |
 | `END_YYYYMMDD` | 학기 종료일, 예: `20241221` |
 
-`.github/workflows/cron.yml`은 위 변수들을 사용해 기본적으로 **월~금 한국시간 오전 10시**(UTC 01:00)에 동기화를 수행합니다. 스케줄을 바꾸고 싶다면 `cron` 표현식만 수정하면 됩니다.
+`.github/workflows/cron.yml`은 위 변수들을 사용해 기본적으로 **월~금 한국시간 오전 10시**(UTC 01:00)에 동기화를 수행합니다. 스케줄을 바꾸고 싶다면 `cron` 표현식만 수정하면 됩니다. 워크플로는 자동으로 `SYNC_INTERVAL_HOURS=0`으로 실행되어 한 번의 동기화 후 즉시 종료되며, GitHub Actions가 장시간 대기하지 않습니다.
 
 ---
 
@@ -102,7 +102,7 @@ SYNC_INTERVAL_HOURS=0  # 로컬에서는 한 번만 실행하고 종료
 
 ```bash
 pnpm install
-pnpm test   # 선택: 휴강/보강 처리 로직 검증
+pnpm test   # 선택: 휴강/보강 처리 로직 검증 (단일 실행)
 pnpm start  # 실제 포털 → Google Calendar 동기화 실행
 ```
 
@@ -214,7 +214,7 @@ pnpm start  # 실제 포털 → Google 캘린더 동기화 실행
     - **Repository variables**
        - `START_YYYYMMDD` → 학기 시작일 (YYYYMMDD)
        - `END_YYYYMMDD` → 학기 종료일 (YYYYMMDD)
-3. `.github/workflows/cron.yml`에 정의된 스케줄(기본: 월~금 한국시간 10:00)에 맞춰 자동으로 동기화됩니다.
+3. `.github/workflows/cron.yml`에 정의된 스케줄(기본: 월~금 한국시간 10:00)에 맞춰 자동으로 동기화됩니다. 워크플로는 `SYNC_INTERVAL_HOURS=0`을 사용하므로 각 실행이 한 번 동기화 후 종료됩니다.
 
 다른 클라우드(예: Render Cron, Cloud Run Jobs)를 쓸 경우에도 기본 아이디어는 동일합니다.
 
