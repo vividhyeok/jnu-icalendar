@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "test": "vitest",
+    "test": "vitest run",
     "start": "node -r @swc-node/register src/index.ts --env-file"
   },
   "devDependencies": {
