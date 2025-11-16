@@ -19,9 +19,11 @@ jobs:
       - name: Run cron job
         run: pnpm start
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY  }}
-          username: ${{ secrets.username }}
-          password: ${{ secrets.password }}
+          username: ${{ secrets.PORTAL_USERNAME }}
+          password: ${{ secrets.PORTAL_PASSWORD }}
           START_YYYYMMDD: ${{ vars.START_YYYYMMDD }}
           END_YYYYMMDD: ${{ vars.END_YYYYMMDD }}
+          GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
+          GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
+          GOOGLE_CALENDAR_ID: ${{ secrets.GOOGLE_CALENDAR_ID }}
+          SYNC_INTERVAL_HOURS: 24
