@@ -1,16 +1,34 @@
 name: Test
-on: [push]
-
+on: [push, pull_request]
+permissions:
+  contents: read
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22.7'
-          cache: 'pnpm'
-      - run: pnpm install
-      - name: Run Test
-        run: pnpm test
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - run: pnpm typecheck
+      - run: pnpm build
+      - run: bash -n scripts/deploy.sh scripts/schedule.sh
+      - run: docker build -t jnu-calendar-test .
+      - name: Container exits unsuccessfully without configuration
+        run: |
+          set +e
+          docker run --rm jnu-calendar-test
+          status=$?
+          set -e
+          test "$status" -eq 1
+      - name: Chrome starts in the production image
+        run: |
+          docker run --rm jnu-calendar-test node -e 'import("puppeteer").then(async ({default:p}) => { const b=await p.launch({args:["--no-sandbox","--disable-dev-shm-usage"]}); await b.close(); })'
+      - name: Offline iframe SSO regression in the image
+        run: docker run --rm --mount type=bind,source="$PWD/scripts",target=/app/scripts,readonly jnu-calendar-test node scripts/browser-smoke.mjs

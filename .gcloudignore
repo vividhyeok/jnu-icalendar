@@ -1,0 +1,10 @@
+**
+!Dockerfile
+!.dockerignore
+!package.json
+!pnpm-lock.yaml
+!tsconfig.json
+!tsconfig.build.json
+!src/
+!src/**
+src/tests/

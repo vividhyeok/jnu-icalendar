@@ -2,100 +2,17 @@ import crypto from 'node:crypto';
 
 import type { Lecture } from './response';
 import { buildCalendarEvents } from './googleEvents';
-import {
-  END_YYYYMMDD,
-  GOOGLE_CALENDAR_ID,
-  GOOGLE_CLIENT_EMAIL,
-  GOOGLE_PRIVATE_KEY,
-  START_YYYYMMDD,
-} from './env';
+import { readConfig } from './env';
+import { getAccessToken } from './googleAuth';
+import { getSyncRange, type SyncRange } from './dateRange';
 import { withRetry } from './retry';
 
-const GOOGLE_TOKEN_AUDIENCE = 'https://oauth2.googleapis.com/token';
-const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
-
-type AccessTokenState = { token: string; expiresAt: number } | null;
-let accessToken: AccessTokenState = null;
 const MANAGED_BY = 'jnu-google-calendar-sync';
-
 class GoogleApiError extends Error {
-  constructor(
-    readonly status: number,
-    readonly responseBody: string,
-    readonly path: string
-  ) {
-    super(
-      `Google Calendar API request failed (${status}) for ${path}: ${responseBody}`
-    );
-    this.name = 'GoogleApiError';
+  constructor(readonly status: number) {
+    super('Google Calendar API request failed (HTTP ' + status + ')');
   }
 }
-
-function redactGoogleApiDetails(value: string) {
-  return [GOOGLE_CALENDAR_ID, encodeURIComponent(GOOGLE_CALENDAR_ID)].reduce(
-    (redacted, sensitiveValue) =>
-      redacted.split(sensitiveValue).join('[redacted]'),
-    value
-  );
-}
-
-const base64Url = (input: Buffer | string) =>
-  Buffer.from(input)
-    .toString('base64')
-    .replace(/=/g, '')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_');
-
-async function getAccessToken() {
-  if (accessToken && accessToken.expiresAt > Date.now() + 60_000)
-    return accessToken.token;
-
-  const iat = Math.floor(Date.now() / 1000);
-  const payload = {
-    iss: GOOGLE_CLIENT_EMAIL,
-    scope: CALENDAR_SCOPE,
-    aud: GOOGLE_TOKEN_AUDIENCE,
-    exp: iat + 3600,
-    iat,
-  } satisfies Record<string, unknown>;
-  const header = { alg: 'RS256', typ: 'JWT' };
-  const unsigned = `${base64Url(JSON.stringify(header))}.${base64Url(
-    JSON.stringify(payload)
-  )}`;
-  const signer = crypto.createSign('RSA-SHA256');
-  signer.update(unsigned);
-  const signature = signer.sign(GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'));
-  const assertion = `${unsigned}.${base64Url(signature)}`;
-
-  const response = await fetch(GOOGLE_TOKEN_AUDIENCE, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      assertion,
-    }).toString(),
-  });
-
-  if (!response.ok)
-    throw new Error(
-      `Failed to issue Google access token: ${response.status} ${response.statusText}`
-    );
-
-  const json = (await response.json()) as {
-    access_token: string;
-    expires_in: number;
-  };
-
-  accessToken = {
-    token: json.access_token,
-    expiresAt: Date.now() + json.expires_in * 1000,
-  };
-
-  return accessToken.token;
-}
-
 async function googleRequest(path: string, init: RequestInit = {}) {
   return withRetry(
     async () => {
@@ -104,6 +21,7 @@ async function googleRequest(path: string, init: RequestInit = {}) {
         `https://www.googleapis.com/calendar/v3/${path}`,
         {
           ...init,
+          signal: AbortSignal.timeout(20_000),
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -113,12 +31,8 @@ async function googleRequest(path: string, init: RequestInit = {}) {
       );
 
       if (!response.ok) {
-        const body = await response.text();
-        throw new GoogleApiError(
-          response.status,
-          redactGoogleApiDetails(body),
-          redactGoogleApiDetails(path)
-        );
+        await response.body?.cancel();
+        throw new GoogleApiError(response.status);
       }
 
       return response;
@@ -127,15 +41,10 @@ async function googleRequest(path: string, init: RequestInit = {}) {
       retries: 2,
       delayMs: 1000,
       shouldRetry(error) {
-        if (!(error instanceof GoogleApiError)) return false;
+        if (!(error instanceof GoogleApiError)) return error instanceof Error && /timeout|fetch failed|ECONNRESET/i.test(error.message);
         return error.status === 429 || error.status >= 500;
       },
-      onRetry(error, attempt, delayMs) {
-        console.warn(
-          `Google API request failed (attempt ${attempt}). Retrying in ${delayMs}ms...`,
-          error
-        );
-      },
+      onRetry(_error, attempt) { console.warn('Google API transient failure; retry ' + attempt); },
     }
   );
 }
@@ -160,7 +69,7 @@ function toEventId(sourceKey: string) {
 }
 
 async function listManagedEventsBetween(timeMin: string, timeMax: string) {
-  const calendarId = encodeURIComponent(GOOGLE_CALENDAR_ID);
+  const calendarId = encodeURIComponent(readConfig().calendarId);
   const managedEvents: CalendarEventLite[] = [];
   let pageToken: string | undefined;
 
@@ -182,7 +91,13 @@ async function listManagedEventsBetween(timeMin: string, timeMax: string) {
       nextPageToken?: string;
       items?: CalendarEventLite[];
     };
-    managedEvents.push(...(body.items ?? []));
+    if (!Array.isArray(body.items ?? [])) throw new Error('Invalid Calendar list response');
+    managedEvents.push(...(body.items ?? []).filter(event =>
+      event.extendedProperties?.private?.managedBy === MANAGED_BY
+      && event.start?.dateTime && event.end?.dateTime
+      && Date.parse(event.start.dateTime) >= Date.parse(timeMin)
+      && Date.parse(event.end.dateTime) <= Date.parse(timeMax)
+    ));
 
     pageToken = body.nextPageToken;
   } while (pageToken);
@@ -199,10 +114,8 @@ function isSameEvent(
     remote.summary === local.summary &&
     (remote.description ?? '') === local.description &&
     (remote.location ?? '') === (local.location ?? '') &&
-    remote.start?.dateTime === local.start.dateTime &&
-    remote.end?.dateTime === local.end.dateTime &&
-    remote.start?.timeZone === local.start.timeZone &&
-    remote.end?.timeZone === local.end.timeZone
+    Date.parse(remote.start?.dateTime ?? '') === Date.parse(local.start.dateTime) &&
+    Date.parse(remote.end?.dateTime ?? '') === Date.parse(local.end.dateTime)
   );
 }
 
@@ -210,7 +123,7 @@ async function upsertEvents(
   events: ReturnType<typeof buildCalendarEvents>,
   remoteById: Map<string, CalendarEventLite>
 ) {
-  const calendarId = encodeURIComponent(GOOGLE_CALENDAR_ID);
+  const calendarId = encodeURIComponent(readConfig().calendarId);
   let inserted = 0;
 
   for (const event of events) {
@@ -244,6 +157,11 @@ async function upsertEvents(
         if (!(error instanceof GoogleApiError) || error.status !== 409)
           throw error;
 
+        const conflict = await googleRequest(`calendars/${calendarId}/events/${eventId}`);
+        const existing = await conflict.json() as CalendarEventLite;
+        if (existing.extendedProperties?.private?.managedBy !== MANAGED_BY) {
+          throw new Error('Calendar event ID conflict with unmanaged event');
+        }
         await googleRequest(`calendars/${calendarId}/events/${eventId}`, {
           method: 'PUT',
           body: JSON.stringify(body),
@@ -260,7 +178,7 @@ async function deleteStaleEvents(
   remoteEvents: CalendarEventLite[],
   localEvents: ReturnType<typeof buildCalendarEvents>
 ) {
-  const calendarId = encodeURIComponent(GOOGLE_CALENDAR_ID);
+  const calendarId = encodeURIComponent(readConfig().calendarId);
   const localIds = new Set(localEvents.map((event) => toEventId(event.sourceKey)));
   let deleted = 0;
 
@@ -279,10 +197,11 @@ async function deleteStaleEvents(
   return deleted;
 }
 
-export async function syncGoogleCalendar(lectures: Lecture[]) {
-  const events = buildCalendarEvents(lectures);
-  const timeMin = `${START_YYYYMMDD.slice(0, 4)}-${START_YYYYMMDD.slice(4, 6)}-${START_YYYYMMDD.slice(6, 8)}T00:00:00+09:00`;
-  const timeMax = `${END_YYYYMMDD.slice(0, 4)}-${END_YYYYMMDD.slice(4, 6)}-${END_YYYYMMDD.slice(6, 8)}T23:59:59+09:00`;
+export async function syncGoogleCalendar(lectures: Lecture[], range: SyncRange = getSyncRange()) {
+  const events = [...new Map(buildCalendarEvents(lectures).map(event => [event.sourceKey, event])).values()];
+  const { timeMin, timeMax } = range;
+  if (events.some(event => Date.parse(event.start.dateTime) < Date.parse(timeMin)
+    || Date.parse(event.end.dateTime) > Date.parse(timeMax))) throw new Error('Portal schema error: event outside sync range');
 
   const remoteEvents = await listManagedEventsBetween(timeMin, timeMax);
   const remoteById = new Map(
@@ -294,6 +213,15 @@ export async function syncGoogleCalendar(lectures: Lecture[]) {
     const remoteEvent = remoteById.get(eventId);
     return !isSameEvent(remoteEvent, event);
   });
+
+  // Compare only events wholly inside the same window, before any mutation.
+  if (remoteEvents.length && !events.length) {
+    throw new Error('Destructive sync blocked: empty replacement for existing events');
+  }
+  const loss = remoteEvents.length - events.length;
+  if (loss >= 5 && events.length < remoteEvents.length / 2) {
+    throw new Error('Destructive sync blocked: event count dropped by more than half');
+  }
 
   const inserted = await upsertEvents(changedEvents, remoteById);
   const deleted = await deleteStaleEvents(remoteEvents, events);

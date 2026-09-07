@@ -1,3 +1,4 @@
+import { Value } from '@sinclair/typebox/value';
 import { Type, Static } from '@sinclair/typebox';
 
 const LectureTObject = Type.Object({
@@ -42,3 +43,25 @@ export const ResponseTObject = Type.Object({
 });
 
 export type Lecture = Static<typeof LectureTObject>;
+
+export function parsePortalResponse(text: string): Lecture[] {
+  let json: unknown;
+  try { json = JSON.parse(text); }
+  catch { throw new Error('Portal response is not JSON; check authentication'); }
+  // No coercion/defaults: a missing classTables must never become [].
+  if (!Value.Check(ResponseTObject, json)) throw new Error('Portal schema error: invalid timetable payload');
+  for (const row of json.classTables) {
+    const date = row.lsnYmd;
+    const iso = date.slice(0,4) + '-' + date.slice(4,6) + '-' + date.slice(6,8);
+    const parsed = new Date(iso + 'T00:00:00Z');
+    if (!/^\d{8}$/.test(date) || !Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0,10) !== iso
+      || !['Y','N'].includes(row.cclctYn) || !['Y','N'].includes(row.splctYn)
+      || !row.sbjctNm.trim()) throw new Error('Portal schema error: invalid lecture fields');
+    if (row.cclctYn === 'Y' && !row.aftrSplctLttmSe?.startsWith('9') && row.bgngHr === null && row.endHr === null) continue;
+    if (!row.bgngHr || !row.endHr || !/^([01]\d|2[0-3]):[0-5]\d$/.test(row.bgngHr)
+      || !/^([01]\d|2[0-3]):[0-5]\d$/.test(row.endHr) || row.bgngHr >= row.endHr) {
+      throw new Error('Portal schema error: invalid lecture time');
+    }
+  }
+  return json.classTables;
+}

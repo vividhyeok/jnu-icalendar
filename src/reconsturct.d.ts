@@ -30,7 +30,7 @@ type ReconstructedLecture =
             LectureStatus,
             '휴강' | '온라인(실시간)' | '온라인(녹화)'
           >;
-          location: string;
+          location: string | null;
         }
       | {
           status: Extract<LectureStatus, '온라인(실시간)' | '온라인(녹화)'>;

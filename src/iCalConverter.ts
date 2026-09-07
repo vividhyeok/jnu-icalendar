@@ -34,7 +34,7 @@ function iCalDateStringToDateObject(date: string) {
     6,
     8
   )}T${date.slice(9, 11)}:${date.slice(11, 13)}:${date.slice(13, 15)}`;
-  return new Date(dateString);
+  return new Date(dateString + '+09:00');
 }
 
 function canMergeLectures(
@@ -66,6 +66,7 @@ export function reconstructedLecture(
 ): ReconstructedLecture {
   if (status == '휴강') return null;
 
+  if (!lecture.bgngHr || !lecture.endHr) throw new Error('Portal schema error: missing lecture time');
   const startTime = formatToICalDate(lecture.lsnYmd, lecture.bgngHr);
   const endTime = formatToICalDate(lecture.lsnYmd, lecture.endHr);
 
