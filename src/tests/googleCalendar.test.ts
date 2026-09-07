@@ -73,7 +73,7 @@ test('moving window preserves old, future and boundary-overlapping events', asyn
     { ...remote(), start: {dateTime:'2026-02-01T09:00:00+09:00'} },
     { ...remote(), end: {dateTime:'2026-05-01T09:00:00+09:00'} },
   ]);
-  expect(await syncGoogleCalendar([], range)).toEqual({ inserted: 0, deleted: 0 });
+  await expect(syncGoogleCalendar([], range)).rejects.toThrow('Destructive sync blocked');
   expect(mutations).toEqual([]);
 });
 test('semester end compares only remaining events in current window', async () => {
