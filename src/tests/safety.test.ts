@@ -7,8 +7,8 @@ import cases from './testcases.json';
 afterEach(() => { vi.unstubAllGlobals();vi.unstubAllEnvs();vi.restoreAllMocks(); });
 test('Seoul midnight and year boundary are independent of host timezone', () => {
   expect(getSyncRange(new Date('2026-12-31T15:00:00Z'))).toEqual({
-    start:'20261225',end:'20270212',
-    timeMin:'2026-12-25T00:00:00+09:00',timeMax:'2027-02-13T00:00:00+09:00',
+    start:'20260825',end:'20270228',
+    timeMin:'2026-08-25T00:00:00+09:00',timeMax:'2027-03-01T00:00:00+09:00',
   });
   expect(getSyncRange(new Date('2026-12-31T14:59:59Z')).start).toBe('20260825');
 });
