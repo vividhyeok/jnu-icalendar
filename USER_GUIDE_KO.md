@@ -1,60 +1,58 @@
-# JNU 시간표 한국어 설치 가이드
+# JNU ?쒓컙???쒓뎅???ㅼ튂 媛?대뱶
 
-설정을 한 번 마치면 포털 시간표를 Google Calendar와 Galaxy의 삼성 캘린더에서 볼 수 있습니다. 학기마다 날짜를 입력할 필요가 없습니다. Windows에 Docker나 gcloud를 설치하지 않고 **Google Cloud Shell**에서 진행합니다.
+?ㅼ젙????踰?留덉튂硫??ы꽭 ?쒓컙?쒕? Google Calendar? Galaxy???쇱꽦 罹섎┛?붿뿉??蹂????덉뒿?덈떎. ?숆린留덈떎 ?좎쭨瑜??낅젰???꾩슂媛 ?놁뒿?덈떎. Windows??Docker??gcloud瑜??ㅼ튂?섏? ?딄퀬 **Google Cloud Shell**?먯꽌 吏꾪뻾?⑸땲??
 
-화면 이름은 언어와 계정에 따라 조금 다를 수 있습니다. 괄호 안 영어 메뉴를 함께 참고하세요. 공식 문서 확인일: 2026-09-07.
+?붾㈃ ?대쫫? ?몄뼱? 怨꾩젙???곕씪 議곌툑 ?ㅻ? ???덉뒿?덈떎. 愿꾪샇 ???곸뼱 硫붾돱瑜??④퍡 李멸퀬?섏꽭?? 怨듭떇 臾몄꽌 ?뺤씤?? 2026-09-07.
 
-## 1. 준비물과 비용
+## 1. 以鍮꾨Ъ怨?鍮꾩슜
 
-- GitHub 계정, 개인 Google 계정, 제주대학교 포털 계정
-- 본인 소유 Google Cloud 프로젝트와 연결 가능한 결제 계정
-- 웹 Google Calendar
-- 선택: Webhook 생성 권한이 있는 Discord 서버
+- GitHub 怨꾩젙, 媛쒖씤 Google 怨꾩젙, ?쒖＜??숆탳 ?ы꽭 怨꾩젙
+- 蹂몄씤 ?뚯쑀 Google Cloud ?꾨줈?앺듃? ?곌껐 媛?ν븳 寃곗젣 怨꾩젙
+- ??Google Calendar
+- ?좏깮: Webhook ?앹꽦 沅뚰븳???덈뒗 Discord ?쒕쾭
 
-결제 계정 연결과 무료 할당량은 다른 개념입니다. 이 도구는 상시 서버 없이 하루 네 번 짧게 실행하지만, 무료라고 보장하지 않습니다. 빌드·이미지 저장 비용도 있습니다. [Cloud Run](https://cloud.google.com/run/pricing), [Cloud Scheduler](https://cloud.google.com/scheduler/pricing), [Secret Manager](https://cloud.google.com/secret-manager/pricing), [Cloud Build](https://cloud.google.com/build/pricing), [Artifact Registry](https://cloud.google.com/artifact-registry/pricing)의 현재 가격을 확인하세요.
+寃곗젣 怨꾩젙 ?곌껐怨?臾대즺 ?좊떦?됱? ?ㅻⅨ 媛쒕뀗?낅땲?? ???꾧뎄???곸떆 ?쒕쾭 ?놁씠 ?섎（ ??踰?吏㏐쾶 ?ㅽ뻾?섏?留? 臾대즺?쇨퀬 蹂댁옣?섏? ?딆뒿?덈떎. 鍮뚮뱶쨌?대?吏 ???鍮꾩슜???덉뒿?덈떎. [Cloud Run](https://cloud.google.com/run/pricing), [Cloud Scheduler](https://cloud.google.com/scheduler/pricing), [Secret Manager](https://cloud.google.com/secret-manager/pricing), [Cloud Build](https://cloud.google.com/build/pricing), [Artifact Registry](https://cloud.google.com/artifact-registry/pricing)???꾩옱 媛寃⑹쓣 ?뺤씤?섏꽭??
 
-Cloud Console의 **결제(Billing) → 예산 및 알림(Budgets & alerts) → 예산 만들기(Create budget)**에서 알림을 설정할 수 있습니다. 예산 알림은 지출을 자동 차단하지 않습니다. [공식 예산 가이드](https://docs.cloud.google.com/billing/docs/how-to/budgets)
+Cloud Console??**寃곗젣(Billing) ???덉궛 諛??뚮┝(Budgets & alerts) ???덉궛 留뚮뱾湲?Create budget)**?먯꽌 ?뚮┝???ㅼ젙?????덉뒿?덈떎. ?덉궛 ?뚮┝? 吏異쒖쓣 ?먮룞 李⑤떒?섏? ?딆뒿?덈떎. [怨듭떇 ?덉궛 媛?대뱶](https://docs.cloud.google.com/billing/docs/how-to/budgets)
 
-## 2. GitHub에서 내 복사본 만들기 (Fork)
+## 2. GitHub?먯꽌 ??蹂듭궗蹂?留뚮뱾湲?(Fork)
 
-1. [원본 저장소](https://github.com/vividhyeok/jnu-google-calendar)를 엽니다.
-2. 오른쪽 위 **Fork**를 누릅니다.
-3. **Owner**에서 본인 GitHub 계정을 선택합니다.
-4. **Repository name**은 jnu-google-calendar를 유지하면 아래 명령을 쓰기 편합니다.
-5. **Copy the main branch only**를 선택합니다. 설치에는 main만 있으면 됩니다.
-6. **Create fork**를 누릅니다.
-7. 주소가 github.com/**내아이디**/jnu-google-calendar인지 확인합니다.
+1. [?먮낯 ??μ냼](https://github.com/vividhyeok/jnu-google-calendar)瑜??쎈땲??
+2. ?ㅻⅨ履???**Fork**瑜??꾨쫭?덈떎.
+3. **Owner**?먯꽌 蹂몄씤 GitHub 怨꾩젙???좏깮?⑸땲??
+4. **Repository name**? jnu-google-calendar瑜??좎??섎㈃ ?꾨옒 紐낅졊???곌린 ?명빀?덈떎.
+5. **Copy the main branch only**瑜??좏깮?⑸땲?? ?ㅼ튂?먮뒗 main留??덉쑝硫??⑸땲??
+6. **Create fork**瑜??꾨쫭?덈떎.
+7. 二쇱냼媛 github.com/**?댁븘?대뵒**/jnu-google-calendar?몄? ?뺤씤?⑸땲??
 
-Fork는 GitHub 계정 아래에 복사하는 작업입니다. 다음의 Clone은 그 복사본을 Cloud Shell에 내려받는 작업입니다. 이후 Clone 주소는 자신의 Fork에서 복사하세요. [GitHub 공식 Fork 안내](https://docs.github.com/en/pull-requests/how-tos/work-with-forks/fork-a-repo)
+Fork??GitHub 怨꾩젙 ?꾨옒??蹂듭궗?섎뒗 ?묒뾽?낅땲?? ?ㅼ쓬??Clone? 洹?蹂듭궗蹂몄쓣 Cloud Shell???대젮諛쏅뒗 ?묒뾽?낅땲?? ?댄썑 Clone 二쇱냼???먯떊??Fork?먯꽌 蹂듭궗?섏꽭?? [GitHub 怨듭떇 Fork ?덈궡](https://docs.github.com/en/pull-requests/how-tos/work-with-forks/fork-a-repo)
 
-## 3. Google Cloud 프로젝트 만들기
+## 3. Google Cloud ?꾨줈?앺듃 留뚮뱾湲?
+1. [Cloud Console](https://console.cloud.google.com/)??Google 怨꾩젙?쇰줈 濡쒓렇?명빀?덈떎.
+2. ?곷떒 ?꾨줈?앺듃 ?좏깮湲곕? ?꾨Ⅴ怨?**???꾨줈?앺듃(New Project)**瑜??좏깮?⑸땲??
+3. ?꾨줈?앺듃 ?대쫫? JNU Calendar泥섎읆 ?뺥빀?덈떎.
+4. ?꾨옒 ?쒖떆?섎뒗 **?꾨줈?앺듃 ID(Project ID)**瑜?湲곕줉?⑸땲?? ?붾㈃???꾨줈?앺듃 ?대쫫怨??ㅻⅤ硫? ?꾨옒 紐낅졊?먮뒗 ID瑜??ｌ뒿?덈떎.
+5. **留뚮뱾湲?Create)**瑜??꾨Ⅴ怨??앹꽦???꾨줈?앺듃瑜??곷떒 ?좏깮湲곗뿉???좏깮?⑸땲??
+6. **寃곗젣(Billing)**?먯꽌 ???꾨줈?앺듃瑜?寃곗젣 怨꾩젙???곌껐?⑸땲?? 湲곗〈 寃곗젣 怨꾩젙???녿떎硫??붾㈃ ?덈궡瑜??곕쫭?덈떎.
 
-1. [Cloud Console](https://console.cloud.google.com/)에 Google 계정으로 로그인합니다.
-2. 상단 프로젝트 선택기를 누르고 **새 프로젝트(New Project)**를 선택합니다.
-3. 프로젝트 이름은 JNU Calendar처럼 정합니다.
-4. 아래 표시되는 **프로젝트 ID(Project ID)**를 기록합니다. 화면용 프로젝트 이름과 다르며, 아래 명령에는 ID를 넣습니다.
-5. **만들기(Create)**를 누르고 생성된 프로젝트를 상단 선택기에서 선택합니다.
-6. **결제(Billing)**에서 이 프로젝트를 결제 계정에 연결합니다. 기존 결제 계정이 없다면 화면 안내를 따릅니다.
+?숆탳 議곗쭅 怨꾩젙? API??IAM ?ㅼ젙???쒗븳?????덉뒿?덈떎. ??媛?대뱶??蹂몄씤??留뚮뱺 媛쒖씤 ?꾨줈?앺듃瑜?愿由ы븷 沅뚰븳???덈떎???꾩젣?낅땲?? 議곗쭅 ?뺤콉 ?ㅻ쪟媛 ?섎㈃ ?대떦 議곗쭅 愿由ъ옄?먭쾶 ?뺤씤?섏꽭?? [?꾨줈?앺듃 ?앹꽦 怨듭떇 ?덈궡](https://docs.cloud.google.com/resource-manager/docs/creating-managing-projects)
 
-학교 조직 계정은 API나 IAM 설정이 제한될 수 있습니다. 이 가이드는 본인이 만든 개인 프로젝트를 관리할 권한이 있다는 전제입니다. 조직 정책 오류가 나면 해당 조직 관리자에게 확인하세요. [프로젝트 생성 공식 안내](https://docs.cloud.google.com/resource-manager/docs/creating-managing-projects)
+## 4. ?쒓컙???꾩슜 Google Calendar 留뚮뱾湲?
+1. PC 釉뚮씪?곗??먯꽌 [Google Calendar](https://calendar.google.com)瑜??쎈땲??
+2. ?쇱そ **?ㅻⅨ 罹섎┛??Other calendars)** ??**+ ????罹섎┛??留뚮뱾湲?Create new calendar)**瑜??꾨쫭?덈떎.
+3. ?대쫫? **JNU ?쒓컙??*, ?쒓컙???**??쒕?援??쒖???/ Asia/Seoul**濡??뺥븯怨?留뚮벊?덈떎.
+4. ?쇱そ ??罹섎┛?붿뿉??JNU ?쒓컙?쒖쓽 ????媛?硫붾돱 ??**?ㅼ젙 諛?怨듭쑀(Settings and sharing)**瑜??쎈땲??
+5. **罹섎┛???듯빀(Integrate calendar)**??**罹섎┛??ID(Calendar ID)**瑜?蹂듭궗???〓땲?? ?쇰컲?곸쑝濡?@group.calendar.google.com?쇰줈 ?앸궔?덈떎.
+6. 怨듦컻 URL?대굹 鍮꾧났媛?iCal 二쇱냼瑜?蹂듭궗?섎뒗 寃껋씠 ?꾨떃?덈떎.
 
-## 4. 시간표 전용 Google Calendar 만들기
+?꾩슜 罹섎┛?붾? ?곕㈃ 媛쒖씤 ?쇱젙怨?援щ텇?섍린 ?쎄퀬 ?ㅼ튂 ?뺤씤쨌臾몄젣 ?닿껐??媛꾨떒?⑸땲?? 罹섎┛?붾? 怨듦컻???꾩슂???놁뒿?덈떎. [??罹섎┛??怨듭떇 ?덈궡](https://support.google.com/calendar/answer/37095)
 
-1. PC 브라우저에서 [Google Calendar](https://calendar.google.com)를 엽니다.
-2. 왼쪽 **다른 캘린더(Other calendars)** 옆 **+ → 새 캘린더 만들기(Create new calendar)**를 누릅니다.
-3. 이름은 **JNU 시간표**, 시간대는 **대한민국 표준시 / Asia/Seoul**로 정하고 만듭니다.
-4. 왼쪽 내 캘린더에서 JNU 시간표의 점 세 개 메뉴 → **설정 및 공유(Settings and sharing)**를 엽니다.
-5. **캘린더 통합(Integrate calendar)**의 **캘린더 ID(Calendar ID)**를 복사해 둡니다. 일반적으로 @group.calendar.google.com으로 끝납니다.
-6. 공개 URL이나 비공개 iCal 주소를 복사하는 것이 아닙니다.
+## 5. Cloud Shell?먯꽌 ??Fork ?대젮諛쏄린
 
-전용 캘린더를 쓰면 개인 일정과 구분하기 쉽고 설치 확인·문제 해결도 간단합니다. 캘린더를 공개할 필요는 없습니다. [새 캘린더 공식 안내](https://support.google.com/calendar/answer/37095)
-
-## 5. Cloud Shell에서 내 Fork 내려받기
-
-1. Cloud Console 오른쪽 위 **Cloud Shell 활성화(Activate Cloud Shell)** 아이콘을 누릅니다.
-2. 하단 터미널이 열리면 필요한 경우 **계속(Continue)**, **승인(Authorize)**을 누릅니다.
-3. GitHub의 **내 Fork**에서 **Code → HTTPS** 주소를 복사합니다.
-4. 아래 명령의 YOUR_GITHUB_NAME을 본인 GitHub 이름으로 바꾸어 실행합니다.
+1. Cloud Console ?ㅻⅨ履???**Cloud Shell ?쒖꽦??Activate Cloud Shell)** ?꾩씠肄섏쓣 ?꾨쫭?덈떎.
+2. ?섎떒 ?곕??먯씠 ?대━硫??꾩슂??寃쎌슦 **怨꾩냽(Continue)**, **?뱀씤(Authorize)**???꾨쫭?덈떎.
+3. GitHub??**??Fork**?먯꽌 **Code ??HTTPS** 二쇱냼瑜?蹂듭궗?⑸땲??
+4. ?꾨옒 紐낅졊??YOUR_GITHUB_NAME??蹂몄씤 GitHub ?대쫫?쇰줈 諛붽씀???ㅽ뻾?⑸땲??
 
 ```bash
 git clone https://github.com/YOUR_GITHUB_NAME/jnu-google-calendar.git
@@ -62,74 +60,71 @@ cd jnu-google-calendar
 git remote -v
 ```
 
-origin 주소가 내 Fork인지 확인하세요. 원본 소유자의 주소로 되어 있다면 아래처럼 교체합니다.
+origin 二쇱냼媛 ??Fork?몄? ?뺤씤?섏꽭?? ?먮낯 ?뚯쑀?먯쓽 二쇱냼濡??섏뼱 ?덈떎硫??꾨옒泥섎읆 援먯껜?⑸땲??
 
 ```bash
 git remote set-url origin https://github.com/YOUR_GITHUB_NAME/jnu-google-calendar.git
 ```
 
-Cloud Shell에는 Git과 gcloud가 준비되어 있습니다. 컴퓨터를 끄더라도 나중에 Cloud Run의 자동 실행은 계속됩니다. [Cloud Shell 시작](https://docs.cloud.google.com/shell/docs/using-cloud-shell)
+Cloud Shell?먮뒗 Git怨?gcloud媛 以鍮꾨릺???덉뒿?덈떎. 而댄벂?곕? ?꾨뜑?쇰룄 ?섏쨷??Cloud Run???먮룞 ?ㅽ뻾? 怨꾩냽?⑸땲?? [Cloud Shell ?쒖옉](https://docs.cloud.google.com/shell/docs/using-cloud-shell)
 
-## 6. 배포 스크립트 실행
+## 6. 諛고룷 ?ㅽ겕由쏀듃 ?ㅽ뻾
 
-YOUR_PROJECT_ID를 3단계에서 기록한 프로젝트 ID로 바꿉니다.
+YOUR_PROJECT_ID瑜?3?④퀎?먯꽌 湲곕줉???꾨줈?앺듃 ID濡?諛붽퓠?덈떎.
 
 ```bash
 bash scripts/deploy.sh YOUR_PROJECT_ID asia-northeast3
 ```
 
-처음 출력되는 프로젝트 ID와 리전이 맞는지 확인합니다. 기본 리전은 서울(asia-northeast3)입니다. 스크립트는 다음을 수행합니다.
+泥섏쓬 異쒕젰?섎뒗 ?꾨줈?앺듃 ID? 由ъ쟾??留욌뒗吏 ?뺤씤?⑸땲?? 湲곕낯 由ъ쟾? ?쒖슱(asia-northeast3)?낅땲?? ?ㅽ겕由쏀듃???ㅼ쓬???섑뻾?⑸땲??
 
-- Cloud Run, Cloud Build, Artifact Registry, Scheduler, Secret Manager, Calendar, IAM Credentials API 활성화
-- 런타임 jnu-calendar와 실행 요청용 jnu-scheduler 서비스 계정 생성
-- 런타임에는 해당 secret을 읽는 권한과 자기 계정의 단기 토큰 생성 권한만 부여
-- 빌드 계정에는 Cloud Run Builder 역할 부여
-- 입력한 secret을 Secret Manager에 저장하고 특정 숫자 버전으로 Job에 연결
-- Dockerfile을 Cloud Build에서 빌드하여 Cloud Run Job 생성/업데이트
+- Cloud Run, Cloud Build, Artifact Registry, Scheduler, Secret Manager, Calendar, IAM Credentials API ?쒖꽦??- ?고???jnu-calendar? ?ㅽ뻾 ?붿껌??jnu-scheduler ?쒕퉬??怨꾩젙 ?앹꽦
+- ?고??꾩뿉???대떦 secret???쎈뒗 沅뚰븳怨??먭린 怨꾩젙???④린 ?좏겙 ?앹꽦 沅뚰븳留?遺??- 鍮뚮뱶 怨꾩젙?먮뒗 Cloud Run Builder ??븷 遺??- ?낅젰??secret??Secret Manager????ν븯怨??뱀젙 ?レ옄 踰꾩쟾?쇰줈 Job???곌껐
+- Dockerfile??Cloud Build?먯꽌 鍮뚮뱶?섏뿬 Cloud Run Job ?앹꽦/?낅뜲?댄듃
 
-**서비스 계정 키(JSON)를 만들거나 다운로드하지 않습니다.**
+**?쒕퉬??怨꾩젙 ??JSON)瑜?留뚮뱾嫄곕굹 ?ㅼ슫濡쒕뱶?섏? ?딆뒿?덈떎.**
 
-질문이 나오면 순서대로 입력합니다.
+吏덈Ц???섏삤硫??쒖꽌?濡??낅젰?⑸땲??
 
-| 질문 | 입력 |
+| 吏덈Ц | ?낅젰 |
 | --- | --- |
-| PORTAL_USERNAME | 제주대 포털 아이디 |
-| PORTAL_PASSWORD | 포털 비밀번호 |
-| Enable Discord notifications? | 처음에는 Enter로 건너뛰어도 됨 |
-| Google Calendar ID | 4단계에서 복사한 ID |
+| PORTAL_USERNAME | ?쒖＜? ?ы꽭 ?꾩씠??|
+| PORTAL_PASSWORD | ?ы꽭 鍮꾨?踰덊샇 |
+| Enable Discord notifications? | 泥섏쓬?먮뒗 Enter濡?嫄대꼫?곗뼱????|
+| Google Calendar ID | 4?④퀎?먯꽌 蹂듭궗??ID |
 
-아이디·비밀번호·Webhook 입력은 화면에 나타나지 않습니다. 정상입니다. 이 값들을 명령줄 인자로 붙이거나 GitHub에 올리지 마세요.
+?꾩씠?붋룸퉬諛踰덊샇쨌Webhook ?낅젰? ?붾㈃???섑??섏? ?딆뒿?덈떎. ?뺤긽?낅땲?? ??媛믩뱾??紐낅졊以??몄옄濡?遺숈씠嫄곕굹 GitHub???щ━吏 留덉꽭??
 
-### 캘린더에 서비스 계정 공유하기
+### 罹섎┛?붿뿉 ?쒕퉬??怨꾩젙 怨듭쑀?섍린
 
-스크립트가 **Share the dedicated calendar with ...**를 출력하고 멈추면:
+?ㅽ겕由쏀듃媛 **Share the dedicated calendar with ...**瑜?異쒕젰?섍퀬 硫덉텛硫?
 
-1. 출력된 **jnu-calendar@프로젝트ID.iam.gserviceaccount.com**을 복사합니다.
-2. Google Calendar의 JNU 시간표 **설정 및 공유**로 돌아갑니다.
-3. **공유 대상(Shared with)** 또는 **특정 사용자 및 그룹과 공유**에서 **사용자 및 그룹 추가(Add people and groups)**를 누릅니다.
-4. 복사한 서비스 계정 이메일을 넣습니다.
-5. 권한은 **일정 변경(Make changes to events)**을 선택하고 **보내기(Send)**를 누릅니다.
-6. Cloud Shell로 돌아가 Enter를 눌러 배포를 계속합니다.
+1. 異쒕젰??**jnu-calendar@?꾨줈?앺듃ID.iam.gserviceaccount.com**??蹂듭궗?⑸땲??
+2. Google Calendar??JNU ?쒓컙??**?ㅼ젙 諛?怨듭쑀**濡??뚯븘媛묐땲??
+3. **怨듭쑀 ???Shared with)** ?먮뒗 **?뱀젙 ?ъ슜??諛?洹몃９怨?怨듭쑀**?먯꽌 **?ъ슜??諛?洹몃９ 異붽?(Add people and groups)**瑜??꾨쫭?덈떎.
+4. 蹂듭궗???쒕퉬??怨꾩젙 ?대찓?쇱쓣 ?ｌ뒿?덈떎.
+5. 沅뚰븳? **?쇱젙 蹂寃?Make changes to events)**???좏깮?섍퀬 **蹂대궡湲?Send)**瑜??꾨쫭?덈떎.
+6. Cloud Shell濡??뚯븘媛 Enter瑜??뚮윭 諛고룷瑜?怨꾩냽?⑸땲??
 
-내 Gmail과 서비스 계정 이메일이 다른 것은 정상입니다. 서비스 계정은 자동화가 쓰는 별도 계정입니다. **변경 및 공유 관리** 권한까지 줄 필요는 없습니다. [Calendar 공유 공식 안내](https://support.google.com/calendar/answer/37082)
+??Gmail怨??쒕퉬??怨꾩젙 ?대찓?쇱씠 ?ㅻⅨ 寃껋? ?뺤긽?낅땲?? ?쒕퉬??怨꾩젙? ?먮룞?붽? ?곕뒗 蹂꾨룄 怨꾩젙?낅땲?? **蹂寃?諛?怨듭쑀 愿由?* 沅뚰븳源뚯? 以??꾩슂???놁뒿?덈떎. [Calendar 怨듭쑀 怨듭떇 ?덈궡](https://support.google.com/calendar/answer/37082)
 
-서비스 계정 이메일을 다시 확인하려면 Cloud Console **IAM 및 관리자(IAM & Admin) → 서비스 계정(Service Accounts)**에서 jnu-calendar를 찾습니다.
+?쒕퉬??怨꾩젙 ?대찓?쇱쓣 ?ㅼ떆 ?뺤씤?섎젮硫?Cloud Console **IAM 諛?愿由ъ옄(IAM & Admin) ???쒕퉬??怨꾩젙(Service Accounts)**?먯꽌 jnu-calendar瑜?李얠뒿?덈떎.
 
-첫 빌드는 Chrome 설치 때문에 몇 분 걸릴 수 있습니다. 실패하면 출력된 오류를 확인한 뒤 같은 명령으로 재시도합니다. 기존 자원을 삭제하지 않습니다. secret 질문에 Enter를 누르면 기존 값을 보존합니다. Discord는 재실행할 때도 y를 선택해야 연결이 유지되며, N은 Job에서 연결을 제거합니다.
+泥?鍮뚮뱶??Chrome ?ㅼ튂 ?뚮Ц??紐?遺?嫄몃┫ ???덉뒿?덈떎. ?ㅽ뙣?섎㈃ 異쒕젰???ㅻ쪟瑜??뺤씤????媛숈? 紐낅졊?쇰줈 ?ъ떆?꾪빀?덈떎. 湲곗〈 ?먯썝????젣?섏? ?딆뒿?덈떎. secret 吏덈Ц??Enter瑜??꾨Ⅴ硫?湲곗〈 媛믪쓣 蹂댁〈?⑸땲?? Discord???ъ떎?됲븷 ?뚮룄 y瑜??좏깮?댁빞 ?곌껐???좎??섎ŉ, N? Job?먯꽌 ?곌껐???쒓굅?⑸땲??
 
-Secret Manager의 **버전(Version)**은 비밀값의 저장 이력입니다. 값 변경은 새 버전을 만들고, 재배포가 그 버전을 Job에 연결합니다. 이전 버전은 자동 삭제하지 않습니다. 사용하지 않는 버전은 정상 동작 확인 후 Secret Manager에서 비활성화하여 관리할 수 있습니다.
+Secret Manager??**踰꾩쟾(Version)**? 鍮꾨?媛믪쓽 ????대젰?낅땲?? 媛?蹂寃쎌? ??踰꾩쟾??留뚮뱾怨? ?щ같?ш? 洹?踰꾩쟾??Job???곌껐?⑸땲?? ?댁쟾 踰꾩쟾? ?먮룞 ??젣?섏? ?딆뒿?덈떎. ?ъ슜?섏? ?딅뒗 踰꾩쟾? ?뺤긽 ?숈옉 ?뺤씤 ??Secret Manager?먯꽌 鍮꾪솢?깊솕?섏뿬 愿由ы븷 ???덉뒿?덈떎.
 
-## 7. 첫 수동 실행과 결과 확인
+## 7. 泥??섎룞 ?ㅽ뻾怨?寃곌낵 ?뺤씤
 
-배포가 끝나면 자동 스케줄을 켜기 전에 직접 실행합니다.
+諛고룷媛 ?앸굹硫??먮룞 ?ㅼ?以꾩쓣 耳쒓린 ?꾩뿉 吏곸젒 ?ㅽ뻾?⑸땲??
 
 ```bash
 gcloud run jobs execute jnu-calendar --project=YOUR_PROJECT_ID --region=asia-northeast3 --wait
 ```
 
-또는 Cloud Console **Cloud Run → 작업(Jobs) → jnu-calendar → 실행(Execute)**을 누릅니다. 실행 목록에서 해당 실행을 열어 상태와 **로그(Logs)**를 확인합니다.
+?먮뒗 Cloud Console **Cloud Run ???묒뾽(Jobs) ??jnu-calendar ???ㅽ뻾(Execute)**???꾨쫭?덈떎. ?ㅽ뻾 紐⑸줉?먯꽌 ?대떦 ?ㅽ뻾???댁뼱 ?곹깭? **濡쒓렇(Logs)**瑜??뺤씤?⑸땲??
 
-정상 로그 흐름:
+?뺤긽 濡쒓렇 ?먮쫫:
 
 ```text
 Sync started
@@ -139,99 +134,99 @@ Calendar diff: ... changed, ... removed
 Sync completed
 ```
 
-Google Calendar에서 오늘부터 앞으로 6주 안의 수업을 확인하세요. 방학이고 수업이 없으면 일정 0개로 정상 종료할 수 있습니다. 동일 명령을 한 번 더 실행하여 중복이 생기지 않고 변경 수가 0인지 확인합니다.
+Google Calendar?먯꽌 ?ㅻ뒛遺???욎쑝濡?6二??덉쓽 ?섏뾽???뺤씤?섏꽭?? 諛⑺븰?닿퀬 ?섏뾽???놁쑝硫??쇱젙 0媛쒕줈 ?뺤긽 醫낅즺?????덉뒿?덈떎. ?숈씪 紐낅졊????踰????ㅽ뻾?섏뿬 以묐났???앷린吏 ?딄퀬 蹂寃??섍? 0?몄? ?뺤씤?⑸땲??
 
-Job 설정은 **View and edit job configuration**에서 확인할 수 있습니다. 리전 서울, 서비스 계정 jnu-calendar, task 1, 병렬 1, CPU 1, 메모리 1 GiB, timeout 600초, Job 재시도 0입니다. **Variables and Secrets**에 PORTAL_USERNAME/PASSWORD secret과 Calendar ID, CALENDAR_SERVICE_ACCOUNT가 표시되어야 합니다. [Job secret 설정](https://docs.cloud.google.com/run/docs/configuring/jobs/secrets)
+Job ?ㅼ젙? **View and edit job configuration**?먯꽌 ?뺤씤?????덉뒿?덈떎. 由ъ쟾 ?쒖슱, ?쒕퉬??怨꾩젙 jnu-calendar, task 1, 蹂묐젹 1, CPU 1, 硫붾え由?1 GiB, timeout 600珥? Job ?ъ떆??0?낅땲?? **Variables and Secrets**??PORTAL_USERNAME/PASSWORD secret怨?Calendar ID, CALENDAR_SERVICE_ACCOUNT媛 ?쒖떆?섏뼱???⑸땲?? [Job secret ?ㅼ젙](https://docs.cloud.google.com/run/docs/configuring/jobs/secrets)
 
-## 8. 자동 스케줄 켜기
+## 8. ?먮룞 ?ㅼ?以?耳쒓린
 
-수동 실행이 성공하면:
+?섎룞 ?ㅽ뻾???깃났?섎㈃:
 
 ```bash
 bash scripts/schedule.sh YOUR_PROJECT_ID asia-northeast3
 ```
 
-한국 시간 매일 **08:17, 12:17, 16:17, 20:17**에 실행합니다. 시간대는 **Asia/Seoul**, cron은 **17 8,12,16,20 * * ***입니다. 같은 이름의 스케줄을 갱신하므로 다시 실행해도 별도 스케줄이 추가되지 않습니다.
+?쒓뎅 ?쒓컙 留ㅼ씪 **08:17, 12:17, 16:17, 20:17**???ㅽ뻾?⑸땲?? ?쒓컙???**Asia/Seoul**, cron? **17 8,12,16,20 * * ***?낅땲?? 媛숈? ?대쫫???ㅼ?以꾩쓣 媛깆떊?섎?濡??ㅼ떆 ?ㅽ뻾?대룄 蹂꾨룄 ?ㅼ?以꾩씠 異붽??섏? ?딆뒿?덈떎.
 
-Cloud Console **Cloud Scheduler → jnu-calendar-sync**에서 **사용 설정됨(Enabled)** 상태, 시간대와 다음 실행 시각을 확인합니다. 기존에 일시중지한 스케줄은 갱신만으로 재개되지 않을 수 있으므로 **재개(Resume)**를 사용합니다.
+Cloud Console **Cloud Scheduler ??jnu-calendar-sync**?먯꽌 **?ъ슜 ?ㅼ젙??Enabled)** ?곹깭, ?쒓컙?? ?ㅼ쓬 ?ㅽ뻾 ?쒓컖???뺤씤?⑸땲?? 湲곗〈???쇱떆以묒????ㅼ?以꾩? 媛깆떊留뚯쑝濡??ш컻?섏? ?딆쓣 ???덉쑝誘濡?**?ш컻(Resume)**瑜??ъ슜?⑸땲??
 
-UI에서 직접 구성하는 공식 경로는 **Cloud Run → Jobs → 대상 Job → Triggers → Add Scheduler Trigger**입니다. 스크립트로 만들었다면 추가로 생성하지 마세요. 수동 구성 시 빈도와 시간대를 위와 같이 지정하고 실행 계정은 jnu-scheduler를 선택합니다. 이 계정은 해당 Job에만 Invoker 권한을 가집니다. [공식 Scheduler 연결 안내](https://docs.cloud.google.com/run/docs/execute/jobs-on-schedule)
+UI?먯꽌 吏곸젒 援ъ꽦?섎뒗 怨듭떇 寃쎈줈??**Cloud Run ??Jobs ?????Job ??Triggers ??Add Scheduler Trigger**?낅땲?? ?ㅽ겕由쏀듃濡?留뚮뱾?덈떎硫?異붽?濡??앹꽦?섏? 留덉꽭?? ?섎룞 援ъ꽦 ??鍮덈룄? ?쒓컙?瑜??꾩? 媛숈씠 吏?뺥븯怨??ㅽ뻾 怨꾩젙? jnu-scheduler瑜??좏깮?⑸땲?? ??怨꾩젙? ?대떦 Job?먮쭔 Invoker 沅뚰븳??媛吏묐땲?? [怨듭떇 Scheduler ?곌껐 ?덈궡](https://docs.cloud.google.com/run/docs/execute/jobs-on-schedule)
 
-Scheduler 성공은 실행 요청 접수를 의미합니다. 실제 동기화 성공 여부는 Cloud Run execution 상태에서 확인합니다.
+Scheduler ?깃났? ?ㅽ뻾 ?붿껌 ?묒닔瑜??섎??⑸땲?? ?ㅼ젣 ?숆린???깃났 ?щ???Cloud Run execution ?곹깭?먯꽌 ?뺤씤?⑸땲??
 
-## 9. 삼성 캘린더에서 보기
+## 9. ?쇱꽦 罹섎┛?붿뿉??蹂닿린
 
-Galaxy에 캘린더 소유자의 Google 계정을 추가하고 **설정 → 계정 및 백업 → 계정 관리 → Google 계정 → 계정 동기화**에서 캘린더를 켭니다. 삼성 캘린더의 메뉴에서 해당 Google 계정 아래 JNU 시간표를 표시하도록 선택합니다. 메뉴 이름은 One UI 버전에 따라 다를 수 있습니다.
+Galaxy??罹섎┛???뚯쑀?먯쓽 Google 怨꾩젙??異붽??섍퀬 **?ㅼ젙 ??怨꾩젙 諛?諛깆뾽 ??怨꾩젙 愿由???Google 怨꾩젙 ??怨꾩젙 ?숆린??*?먯꽌 罹섎┛?붾? 耳?땲?? ?쇱꽦 罹섎┛?붿쓽 硫붾돱?먯꽌 ?대떦 Google 怨꾩젙 ?꾨옒 JNU ?쒓컙?쒕? ?쒖떆?섎룄濡??좏깮?⑸땲?? 硫붾돱 ?대쫫? One UI 踰꾩쟾???곕씪 ?ㅻ? ???덉뒿?덈떎.
 
-먼저 웹 Google Calendar에서 일정이 보이는지 확인하세요. 웹에는 보이는데 휴대폰에만 없다면 계정/캘린더 표시와 동기화를 확인합니다.
+癒쇱? ??Google Calendar?먯꽌 ?쇱젙??蹂댁씠?붿? ?뺤씤?섏꽭?? ?뱀뿉??蹂댁씠?붾뜲 ?대??곗뿉留??녿떎硫?怨꾩젙/罹섎┛???쒖떆? ?숆린?붾? ?뺤씤?⑸땲??
 
-## 10. Discord 알림 (선택)
+## 10. Discord ?뚮┝ (?좏깮)
 
-건너뛰어도 모든 동기화 기능은 정상 동작합니다.
+嫄대꼫?곗뼱??紐⑤뱺 ?숆린??湲곕뒫? ?뺤긽 ?숈옉?⑸땲??
 
-1. Webhook 관리 권한이 있는 Discord 서버를 엽니다.
-2. **서버 설정(Server Settings) → 연동(Integrations) → Webhooks**로 이동합니다.
-3. **New Webhook / Create Webhook**을 눌러 만듭니다.
-4. 알림을 받을 채널을 선택하고 저장합니다.
-5. **Copy Webhook URL**을 누릅니다.
+1. Webhook 愿由?沅뚰븳???덈뒗 Discord ?쒕쾭瑜??쎈땲??
+2. **?쒕쾭 ?ㅼ젙(Server Settings) ???곕룞(Integrations) ??Webhooks**濡??대룞?⑸땲??
+3. **New Webhook / Create Webhook**???뚮윭 留뚮벊?덈떎.
+4. ?뚮┝??諛쏆쓣 梨꾨꼸???좏깮?섍퀬 ??ν빀?덈떎.
+5. **Copy Webhook URL**???꾨쫭?덈떎.
 
-별도 봇, Developer Application, OAuth 설정은 필요 없습니다. [Discord 공식 Webhook 안내](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks)
+蹂꾨룄 遊? Developer Application, OAuth ?ㅼ젙? ?꾩슂 ?놁뒿?덈떎. [Discord 怨듭떇 Webhook ?덈궡](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks)
 
-배포 스크립트를 다시 실행하고 기존 포털 값은 Enter로 보존합니다. Discord 질문에는 **y**, 다음 숨김 입력에는 복사한 URL을 붙여넣습니다. Calendar ID도 다시 입력합니다. jnu-discord-webhook secret이 생성되어 DISCORD_WEBHOOK_URL로 연결됩니다.
+諛고룷 ?ㅽ겕由쏀듃瑜??ㅼ떆 ?ㅽ뻾?섍퀬 湲곗〈 ?ы꽭 媛믪? Enter濡?蹂댁〈?⑸땲?? Discord 吏덈Ц?먮뒗 **y**, ?ㅼ쓬 ?④? ?낅젰?먮뒗 蹂듭궗??URL??遺숈뿬?ｌ뒿?덈떎. Calendar ID???ㅼ떆 ?낅젰?⑸땲?? jnu-discord-webhook secret???앹꽦?섏뼱 DISCORD_WEBHOOK_URL濡??곌껐?⑸땲??
 
-URL은 비밀번호와 같습니다. GitHub, 공개 채팅, 스크린샷에 올리지 마세요. 노출되었다면 Discord에서 해당 Webhook을 삭제·재생성하고 스크립트로 새 값을 저장합니다.
+URL? 鍮꾨?踰덊샇? 媛숈뒿?덈떎. GitHub, 怨듦컻 梨꾪똿, ?ㅽ겕由곗꺑???щ━吏 留덉꽭?? ?몄텧?섏뿀?ㅻ㈃ Discord?먯꽌 ?대떦 Webhook????젣쨌?ъ깮?깊븯怨??ㅽ겕由쏀듃濡???媛믪쓣 ??ν빀?덈떎.
 
-알림 예:
+?뚮┝ ??
 
-- JNU 시간표 변경: 추가/수정 2개, 삭제 1개. 캘린더를 확인하세요.
-- JNU 시간표 동기화 실패 (portal). Cloud Run 실행 로그를 확인하세요.
+- JNU ?쒓컙??蹂寃? 異붽?/?섏젙 2媛? ??젣 1媛? 罹섎┛?붾? ?뺤씤?섏꽭??
+- JNU ?쒓컙???숆린???ㅽ뙣 (portal). Cloud Run ?ㅽ뻾 濡쒓렇瑜??뺤씤?섏꽭??
 
-변경이 없으면 성공 메시지도 보내지 않습니다. Discord 실패는 동기화 결과를 바꾸지 않습니다. 휴대폰 알림 수신은 Discord 채널 알림 설정에도 달려 있습니다.
+蹂寃쎌씠 ?놁쑝硫??깃났 硫붿떆吏??蹂대궡吏 ?딆뒿?덈떎. Discord ?ㅽ뙣???숆린??寃곌낵瑜?諛붽씀吏 ?딆뒿?덈떎. ?대????뚮┝ ?섏떊? Discord 梨꾨꼸 ?뚮┝ ?ㅼ젙?먮룄 ?щ젮 ?덉뒿?덈떎.
 
-## 11. 설치 완료 체크
+## 11. ?ㅼ튂 ?꾨즺 泥댄겕
 
-- [ ] Cloud Run Jobs에 jnu-calendar가 있다.
-- [ ] 수동 실행이 성공한다. 실패하면 아래 Cloud Run 항목을 확인한다.
-- [ ] 로그에 Portal fetch succeeded와 Sync completed가 나온다.
-- [ ] 전용 Google Calendar에 수업이 표시된다. 없다면 조회 범위/Calendar ID를 확인한다.
-- [ ] 재실행해도 중복되지 않는다.
-- [ ] 삼성 캘린더에서 같은 캘린더가 표시된다.
-- [ ] Scheduler가 Enabled이고 Asia/Seoul이며 다음 실행 시각이 보인다.
+- [ ] Cloud Run Jobs??jnu-calendar媛 ?덈떎.
+- [ ] ?섎룞 ?ㅽ뻾???깃났?쒕떎. ?ㅽ뙣?섎㈃ ?꾨옒 Cloud Run ??ぉ???뺤씤?쒕떎.
+- [ ] 濡쒓렇??Portal fetch succeeded? Sync completed媛 ?섏삩??
+- [ ] ?꾩슜 Google Calendar???섏뾽???쒖떆?쒕떎. ?녿떎硫?議고쉶 踰붿쐞/Calendar ID瑜??뺤씤?쒕떎.
+- [ ] ?ъ떎?됲빐??以묐났?섏? ?딅뒗??
+- [ ] ?쇱꽦 罹섎┛?붿뿉??媛숈? 罹섎┛?붽? ?쒖떆?쒕떎.
+- [ ] Scheduler媛 Enabled?닿퀬 Asia/Seoul?대ŉ ?ㅼ쓬 ?ㅽ뻾 ?쒓컖??蹂댁씤??
 
-이후 시간표 변경은 다음 스케줄에서 반영됩니다. 다음 학기에도 START/END 날짜를 수정하지 않습니다.
+?댄썑 ?쒓컙??蹂寃쎌? ?ㅼ쓬 ?ㅼ?以꾩뿉??諛섏쁺?⑸땲?? ?ㅼ쓬 ?숆린?먮룄 START/END ?좎쭨瑜??섏젙?섏? ?딆뒿?덈떎.
 
-## 12. 문제 해결
+## 12. 臾몄젣 ?닿껐
 
-| 증상 | 확인할 곳과 다음 조치 |
+| 利앹긽 | ?뺤씤??怨녠낵 ?ㅼ쓬 議곗튂 |
 | --- | --- |
-| Cloud Run 실패 | Jobs → jnu-calendar → 해당 execution → Logs. 마지막 실패 단계 확인 |
-| Portal authentication failed | 포털에 브라우저로 직접 로그인, ID/PW·추가 인증·비밀번호 변경 요구 확인. Secret Manager의 최신 값으로 재배포 |
-| Navigation timeout / portal timeout | 포털 장애인지 직접 접속. 반복되면 로그인 구조 변경 가능성. 계정 값을 로그에 붙이지 말고 실패 단계만 공유 |
-| Google Calendar에 일정 없음 | 전용 Calendar ID인지, jnu-calendar 이메일 공유/일정 변경 권한, Calendar API 활성화, 로그의 6주 조회 범위 확인 |
-| 403 / permission denied | Calendar 공유, IAM Credentials API, 자기 계정 Token Creator, secret별 Accessor 확인. 설치 명령 실패면 실행한 사람의 프로젝트 권한도 확인 |
-| source build 권한 실패 | Cloud Build 기본 서비스 계정과 Cloud Run Builder 권한 확인. IAM 반영에 잠시 걸릴 수 있어 배포를 재실행 |
-| Discord가 안 옴 | 변경 없으면 정상. Job의 Webhook secret 연결/버전, Discord Webhook 유효성·채널 권한·알림 설정 확인. Calendar 상태와 별도로 판단 |
-| Scheduler가 실행 안 함 | Enabled, 시간대, 다음 실행 시각, jnu-scheduler의 해당 Job Invoker와 Cloud Scheduler 로그 확인 |
-| 시간표가 0개 / Destructive sync blocked | 기존 일정이 있으면 삭제하지 않고 중단하도록 설계됨. 먼저 포털 실제 시간표와 계정 확인 |
-| 원본으로 push하려 함 | git remote -v에서 origin을 본인 Fork URL로 교체 |
+| Cloud Run ?ㅽ뙣 | Jobs ??jnu-calendar ???대떦 execution ??Logs. 留덉?留??ㅽ뙣 ?④퀎 ?뺤씤 |
+| Portal authentication failed | ?ы꽭??釉뚮씪?곗?濡?吏곸젒 濡쒓렇?? ID/PW쨌異붽? ?몄쬆쨌鍮꾨?踰덊샇 蹂寃??붽뎄 ?뺤씤. Secret Manager??理쒖떊 媛믪쑝濡??щ같??|
+| Navigation timeout / portal timeout | ?ы꽭 ?μ븷?몄? 吏곸젒 ?묒냽. 諛섎났?섎㈃ 濡쒓렇??援ъ“ 蹂寃?媛?μ꽦. 怨꾩젙 媛믪쓣 濡쒓렇??遺숈씠吏 留먭퀬 ?ㅽ뙣 ?④퀎留?怨듭쑀 |
+| Google Calendar???쇱젙 ?놁쓬 | ?꾩슜 Calendar ID?몄?, jnu-calendar ?대찓??怨듭쑀/?쇱젙 蹂寃?沅뚰븳, Calendar API ?쒖꽦?? 濡쒓렇??6二?議고쉶 踰붿쐞 ?뺤씤 |
+| 403 / permission denied | Calendar 怨듭쑀, IAM Credentials API, ?먭린 怨꾩젙 Token Creator, secret蹂?Accessor ?뺤씤. ?ㅼ튂 紐낅졊 ?ㅽ뙣硫??ㅽ뻾???щ엺???꾨줈?앺듃 沅뚰븳???뺤씤 |
+| source build 沅뚰븳 ?ㅽ뙣 | Cloud Build 湲곕낯 ?쒕퉬??怨꾩젙怨?Cloud Run Builder 沅뚰븳 ?뺤씤. IAM 諛섏쁺???좎떆 嫄몃┫ ???덉뼱 諛고룷瑜??ъ떎??|
+| Discord媛 ????| 蹂寃??놁쑝硫??뺤긽. Job??Webhook secret ?곌껐/踰꾩쟾, Discord Webhook ?좏슚?굿룹콈??沅뚰븳쨌?뚮┝ ?ㅼ젙 ?뺤씤. Calendar ?곹깭? 蹂꾨룄濡??먮떒 |
+| Scheduler媛 ?ㅽ뻾 ????| Enabled, ?쒓컙?, ?ㅼ쓬 ?ㅽ뻾 ?쒓컖, jnu-scheduler???대떦 Job Invoker? Cloud Scheduler 濡쒓렇 ?뺤씤 |
+| ?쒓컙?쒓? 0媛?/ Destructive sync blocked | 湲곗〈 ?쇱젙???덉쑝硫???젣?섏? ?딄퀬 以묐떒?섎룄濡??ㅺ퀎?? 癒쇱? ?ы꽭 ?ㅼ젣 ?쒓컙?쒖? 怨꾩젙 ?뺤씤 |
+| ?먮낯?쇰줈 push?섎젮 ??| git remote -v?먯꽌 origin??蹂몄씤 Fork URL濡?援먯껜 |
 
-진짜 전체 휴강이나 대규모 수강 변경도 안전장치가 중단할 수 있습니다. 포털을 확인한 뒤 전용 캘린더에서 없어져야 할 **해당 일정만** 수동 정리하고 재실행하세요. 응답이 이상한 상태에서 캘린더 전체를 비우지 마세요.
+吏꾩쭨 ?꾩껜 ?닿컯?대굹 ?洹쒕え ?섍컯 蹂寃쎈룄 ?덉쟾?μ튂媛 以묐떒?????덉뒿?덈떎. ?ы꽭???뺤씤?????꾩슜 罹섎┛?붿뿉???놁뼱?몄빞 ??**?대떦 ?쇱젙留?* ?섎룞 ?뺣━?섍퀬 ?ъ떎?됲븯?몄슂. ?묐떟???댁긽???곹깭?먯꽌 罹섎┛???꾩껜瑜?鍮꾩슦吏 留덉꽭??
 
-한 실행 도중 Calendar API가 실패하면 그 전에 반영된 일부 변경은 남을 수 있습니다. 다음 성공 실행에서 재계산합니다. 동시에 여러 execution을 수동 시작하지 마세요.
+???ㅽ뻾 ?꾩쨷 Calendar API媛 ?ㅽ뙣?섎㈃ 洹??꾩뿉 諛섏쁺???쇰? 蹂寃쎌? ?⑥쓣 ???덉뒿?덈떎. ?ㅼ쓬 ?깃났 ?ㅽ뻾?먯꽌 ?ш퀎?고빀?덈떎. ?숈떆???щ윭 execution???섎룞 ?쒖옉?섏? 留덉꽭??
 
-## 13. 기존 GitHub Actions 사용자 전환
+## 13. 湲곗〈 GitHub Actions ?ъ슜???꾪솚
 
-1. 기존 Fork의 Actions → cron → 점 세 개 메뉴에서 **Disable workflow**로 일시중지하고 실행 중 작업이 없는지 확인합니다.
-2. 새 코드를 받으면 cron.yml이 제거되고 CI만 남습니다.
-3. 이 가이드대로 Cloud Run을 설정합니다. 기존 전용 캘린더를 사용하면 새 런타임 이메일을 공유 대상에 추가합니다.
-4. 첫 실행과 중복 방지를 확인하고 새 Scheduler를 켭니다.
-5. 이전 JSON 키를 다른 곳에서 쓰지 않는지 확인한 뒤 IAM 서비스 계정의 Keys에서 폐기합니다. GitHub Actions의 기존 포털/Google 키 secrets와 START/END 변수도 더 이상 필요하지 않습니다.
+1. 湲곗〈 Fork??Actions ??cron ??????媛?硫붾돱?먯꽌 **Disable workflow**濡??쇱떆以묒??섍퀬 ?ㅽ뻾 以??묒뾽???녿뒗吏 ?뺤씤?⑸땲??
+2. ??肄붾뱶瑜?諛쏆쑝硫?cron.yml???쒓굅?섍퀬 CI留??⑥뒿?덈떎.
+3. ??媛?대뱶?濡?Cloud Run???ㅼ젙?⑸땲?? 湲곗〈 ?꾩슜 罹섎┛?붾? ?ъ슜?섎㈃ ???고????대찓?쇱쓣 怨듭쑀 ??곸뿉 異붽??⑸땲??
+4. 泥??ㅽ뻾怨?以묐났 諛⑹?瑜??뺤씤?섍퀬 ??Scheduler瑜?耳?땲??
+5. ?댁쟾 JSON ?ㅻ? ?ㅻⅨ 怨녹뿉???곗? ?딅뒗吏 ?뺤씤????IAM ?쒕퉬??怨꾩젙??Keys?먯꽌 ?먭린?⑸땲?? GitHub Actions??湲곗〈 ?ы꽭/Google ??secrets? START/END 蹂?섎룄 ???댁긽 ?꾩슂?섏? ?딆뒿?덈떎.
 
-현재 조회 범위 밖의 과거 일정은 보존합니다. 기존 별도 자동 실행은 중지해야 두 운영 경로가 겹치지 않습니다.
+?꾩옱 議고쉶 踰붿쐞 諛뽰쓽 怨쇨굅 ?쇱젙? 蹂댁〈?⑸땲?? 湲곗〈 蹂꾨룄 ?먮룞 ?ㅽ뻾? 以묒??댁빞 ???댁쁺 寃쎈줈媛 寃뱀튂吏 ?딆뒿?덈떎.
 
-## 14. 코드 업데이트와 중지
+## 14. 肄붾뱶 ?낅뜲?댄듃? 以묒?
 
-GitHub 내 Fork에서 **Sync fork → Update branch**를 선택한 뒤 Cloud Shell에서:
+GitHub ??Fork?먯꽌 **Sync fork ??Update branch**瑜??좏깮????Cloud Shell?먯꽌:
 
 ```bash
 cd jnu-google-calendar
@@ -239,6 +234,6 @@ git pull --ff-only
 bash scripts/deploy.sh YOUR_PROJECT_ID asia-northeast3
 ```
 
-Cloud Shell이 이미 저장소 폴더라면 cd는 생략합니다. 충돌이 있으면 강제로 덮어쓰지 말고 변경사항부터 확인합니다. 코드 업데이트는 재배포해야 운영에 반영됩니다. 포털의 시간표 변경에는 이 작업이 필요 없습니다. [Fork 동기화 공식 안내](https://docs.github.com/en/pull-requests/how-tos/work-with-forks/syncing-a-fork)
+Cloud Shell???대? ??μ냼 ?대뜑?쇰㈃ cd???앸왂?⑸땲?? 異⑸룎???덉쑝硫?媛뺤젣濡???뼱?곗? 留먭퀬 蹂寃쎌궗??????뺤씤?⑸땲?? 肄붾뱶 ?낅뜲?댄듃???щ같?ы빐???댁쁺??諛섏쁺?⑸땲?? ?ы꽭???쒓컙??蹂寃쎌뿉?????묒뾽???꾩슂 ?놁뒿?덈떎. [Fork ?숆린??怨듭떇 ?덈궡](https://docs.github.com/en/pull-requests/how-tos/work-with-forks/syncing-a-fork)
 
-잠시 중지하려면 Cloud Scheduler에서 해당 스케줄을 **Pause**합니다. 이미 실행 중인 Job은 별도 확인하세요. 완전히 사용을 중단한다면 Scheduler/Job, 불필요한 이미지와 secret을 검토하여 정리하고 Calendar 공유 권한도 해제할 수 있습니다.
+?좎떆 以묒??섎젮硫?Cloud Scheduler?먯꽌 ?대떦 ?ㅼ?以꾩쓣 **Pause**?⑸땲?? ?대? ?ㅽ뻾 以묒씤 Job? 蹂꾨룄 ?뺤씤?섏꽭?? ?꾩쟾???ъ슜??以묐떒?쒕떎硫?Scheduler/Job, 遺덊븘?뷀븳 ?대?吏? secret??寃?좏븯???뺣━?섍퀬 Calendar 怨듭쑀 沅뚰븳???댁젣?????덉뒿?덈떎.

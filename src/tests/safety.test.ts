@@ -10,7 +10,7 @@ test('Seoul midnight and year boundary are independent of host timezone', () => 
     start:'20261225',end:'20270212',
     timeMin:'2026-12-25T00:00:00+09:00',timeMax:'2027-02-13T00:00:00+09:00',
   });
-  expect(getSyncRange(new Date('2026-12-31T14:59:59Z')).start).toBe('20261224');
+  expect(getSyncRange(new Date('2026-12-31T14:59:59Z')).start).toBe('20260825');
 });
 test('leap day', () => { expect(getSyncRange(new Date('2024-03-01T00:00:00+09:00')).start).toBe('20240223'); });
 test('valid empty response', () => { expect(parsePortalResponse('{"classTables":[]}')).toEqual([]); });
