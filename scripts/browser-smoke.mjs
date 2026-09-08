@@ -13,71 +13,50 @@ const browser = await puppeteer.launch({
 
 const loginPage = await browser.newPage();
 const timetablePage = await browser.newPage();
-let authenticated = false;
 
-async function installFixture(page) {
-  await page.setRequestInterception(true);
-  page.on('request', request => {
-    const url = new URL(request.url());
+await loginPage.setRequestInterception(true);
+loginPage.on('request', request => {
+  const url = new URL(request.url());
 
-    if (url.pathname === '/login.htm') {
-      void request.respond({
-        contentType: 'text/html',
-        body:
-          '<form action="/login-result" method="post" target="receiver">' +
-          '<input id="userId" name="userId">' +
-          '<input id="userPswd" name="userPswd">' +
-          '<button type="submit">Login</button>' +
-          '</form>' +
-          '<iframe name="receiver"></iframe>',
-      });
-      return;
-    }
+  if (url.pathname === '/login.htm') {
+    void request.respond({
+      contentType: 'text/html',
+      body:
+        '<form onsubmit="document.body.dataset.submitted=\'yes\'; return false;">' +
+        '<input id="userId" name="userId">' +
+        '<input id="userPswd" name="userPswd">' +
+        '<button type="submit">Login</button>' +
+        '</form>',
+    });
+    return;
+  }
 
-    if (url.pathname === '/login-result') {
-      authenticated = true;
-      void request.respond({
-        contentType: 'text/html',
-        body: '<script>parent.location="/landing.htm"</script>',
-      });
-      return;
-    }
+  void request.abort();
+});
 
-    if (url.pathname === '/landing.htm') {
-      void request.respond({
-        contentType: 'text/html',
-        body: '<h1>Authenticated fixture</h1>',
-      });
-      return;
-    }
+await timetablePage.setRequestInterception(true);
+timetablePage.on('request', request => {
+  const url = new URL(request.url());
 
-    if (url.pathname === '/api/patis/timeTable.jsp') {
-      if (authenticated) {
-        void request.respond({
-          contentType: 'application/json',
-          body: '{"classTables":[]}',
-        });
-      } else {
-        void request.respond({
-          contentType: 'text/html',
-          body:
-            '<html><form action="/login.htm">' +
-            '<input id="userId"><input id="userPswd">' +
-            '</form></html>',
-        });
-      }
-      return;
-    }
+  if (url.pathname === '/api/patis/timeTable.jsp') {
+    void request.respond({
+      contentType: 'application/json',
+      body: '{"classTables":[]}',
+    });
+    return;
+  }
 
-    void request.abort();
-  });
-}
-
-await installFixture(loginPage);
-await installFixture(timetablePage);
+  void request.abort();
+});
 
 try {
   await login(loginPage, 'fixture-user', 'fixture-password');
+
+  const submitted = await loginPage.$eval(
+    'body',
+    body => body.dataset.submitted,
+  );
+  if (submitted !== 'yes') throw new Error('Login form fixture was not submitted');
 
   const lectures = await fetchTimetableFromPage(timetablePage, {
     start: '20260901',
@@ -94,7 +73,7 @@ try {
     throw new Error('Smoke fixture unexpectedly depends on /index.htm');
   }
 
-  console.info('Chrome iframe SSO smoke test passed using timetable API verification');
+  console.info('Chrome portal login/API smoke test passed without /index.htm dependency');
 } finally {
   await browser.close();
 }
