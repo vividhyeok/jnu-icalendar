@@ -98,6 +98,21 @@ test('temporary login-page response is retried until timetable JSON appears', as
   expect(state.close).toHaveBeenCalledOnce();
 });
 
+test('temporary JSON session response is polled until timetable JSON appears', async () => {
+  vi.useFakeTimers();
+  state.page.evaluate
+    .mockResolvedValueOnce(response('{"authenticated":false}'))
+    .mockResolvedValueOnce(response(VALID_PAYLOAD));
+
+  const promise = fetchPortalLectures();
+  await Promise.resolve();
+  await vi.runAllTimersAsync();
+
+  await expect(promise).resolves.toEqual([]);
+  expect(state.page.evaluate).toHaveBeenCalledTimes(2);
+  expect(state.launch).toHaveBeenCalledOnce();
+});
+
 test('transient execution-context replacement is retried in the same browser session', async () => {
   vi.useFakeTimers();
   state.page.evaluate
@@ -129,6 +144,20 @@ test('persistent login-page response becomes a non-retriable authentication fail
   expect(state.close).toHaveBeenCalledOnce();
 });
 
+test('persistent JSON response without classTables becomes authentication failure', async () => {
+  vi.useFakeTimers();
+  state.page.evaluate.mockResolvedValue(response('{"authenticated":false,"message":"fixture"}'));
+
+  const assertion = expect(fetchPortalLectures()).rejects.toThrow('Portal authentication failed');
+  await Promise.resolve();
+  await vi.runAllTimersAsync();
+  await assertion;
+
+  expect(state.launch).toHaveBeenCalledOnce();
+  expect(state.page.evaluate).toHaveBeenCalledTimes(12);
+  expect(state.close).toHaveBeenCalledOnce();
+});
+
 test('HTTP 403 is an authentication failure without retrying', async () => {
   state.page.evaluate.mockResolvedValue(response('', { status: 403 }));
   await expect(fetchPortalLectures()).rejects.toThrow('Portal authentication failed');
@@ -143,10 +172,11 @@ test('non-login malformed payload is not mislabeled as authentication failure', 
   expect(state.close).toHaveBeenCalledOnce();
 });
 
-test('schema errors do not retry and browser closes', async () => {
-  state.page.evaluate.mockResolvedValue(response('{}'));
+test('classTables with invalid shape stays a schema error without outer retry', async () => {
+  state.page.evaluate.mockResolvedValue(response('{"classTables":{}}'));
   await expect(fetchPortalLectures()).rejects.toThrow('schema');
   expect(state.launch).toHaveBeenCalledOnce();
+  expect(state.page.evaluate).toHaveBeenCalledOnce();
   expect(state.close).toHaveBeenCalledOnce();
 });
 
