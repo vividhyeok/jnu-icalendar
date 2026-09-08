@@ -42,6 +42,67 @@ function looksLikeLoginResponse(response: BrowserFetchResponse) {
     || sample.includes('/login.htm');
 }
 
+function parseJson(text: string): unknown {
+  try { return JSON.parse(text); }
+  catch { throw new Error('Portal timetable response is not valid JSON'); }
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * The portal can briefly return a small JSON session/auth object immediately
+ * after the login submit while the hidden SSO iframe is still completing. A
+ * timetable response is identifiable by the presence of classTables.
+ */
+function isJsonSessionPending(json: unknown) {
+  return isObject(json) && !Object.prototype.hasOwnProperty.call(json, 'classTables');
+}
+
+function valueType(value: unknown) {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'array';
+  return typeof value;
+}
+
+/**
+ * Log only structural metadata. Never log response values, HTML, credentials,
+ * cookies, tokens, or dialog text.
+ */
+function logSafePayloadShape(json: unknown) {
+  if (!isObject(json)) {
+    console.warn('Portal timetable payload shape: top=' + valueType(json));
+    return;
+  }
+
+  const topKeys = Object.keys(json).sort().slice(0, 20);
+  const classTables = json.classTables;
+  const classTablesShape = Array.isArray(classTables)
+    ? 'array(' + classTables.length + ')'
+    : valueType(classTables);
+
+  let rowKeys = '-';
+  let fieldTypes = '-';
+  if (Array.isArray(classTables) && isObject(classTables[0])) {
+    const first = classTables[0];
+    rowKeys = Object.keys(first).sort().slice(0, 40).join(',');
+    const fields = [
+      'estblScyr', 'lsnYmd', 'sbjctNm', 'cclctYn', 'splctYn',
+      'aftrSplctLttmSe', 'untactLsnMthdSe', 'lctrmNm', 'empno', 'empnm',
+      'bgngHr', 'endHr',
+    ];
+    fieldTypes = fields.map(field => field + ':' + valueType(first[field])).join(',');
+  }
+
+  console.warn(
+    'Portal timetable payload shape: topKeys=[' + topKeys.join(',') + ']'
+      + '; classTables=' + classTablesShape
+      + '; firstRowKeys=[' + rowKeys + ']'
+      + '; expectedFieldTypes=[' + fieldTypes + ']'
+  );
+}
+
 function normalizePortalPayloadError(error: unknown): Error {
   const message = error instanceof Error ? error.message : String(error);
   if (/not JSON/i.test(message)) return new Error('Portal timetable response is not valid JSON');
@@ -144,8 +205,26 @@ export async function fetchTimetableFromPage(page: Page, range: SyncRange): Prom
       throw new Error('Portal HTTP ' + response.status);
     }
 
+    const json = parseJson(response.text);
+
+    // A valid JSON response without classTables is commonly the SSO/session
+    // handshake response, not timetable data. Give the hidden login flow a short
+    // bounded window to finish instead of misreporting it as a schema failure.
+    if (isJsonSessionPending(json)) {
+      if (attempt === 1) console.info('Portal timetable API session not ready; polling');
+      if (attempt === AUTH_VERIFY_ATTEMPTS) {
+        logSafePayloadShape(json);
+        throw new Error(AUTH_FAILURE);
+      }
+      await sleep(AUTH_VERIFY_DELAY_MS);
+      continue;
+    }
+
     try { return parsePortalResponse(response.text); }
-    catch (error) { throw normalizePortalPayloadError(error); }
+    catch (error) {
+      logSafePayloadShape(json);
+      throw normalizePortalPayloadError(error);
+    }
   }
 
   throw new Error(AUTH_FAILURE);
