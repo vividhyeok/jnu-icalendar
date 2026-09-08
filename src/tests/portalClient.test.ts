@@ -8,7 +8,7 @@ vi.mock('../env',()=>({readConfig:()=>({username:'fixture',password:'fixture'})}
 import { fetchPortalLectures, isRetriablePortalError } from '../portalClient';
 beforeEach(()=>{
   Object.values(state.page).forEach(fn=>fn.mockReset());
-  state.page.waitForFunction.mockResolvedValue({jsonValue:async()=> 'authenticated'});
+  state.page.waitForFunction.mockResolvedValue({jsonValue:async()=> 'authenticated',dispose:async()=>{}});
   state.launch.mockReset().mockResolvedValue({newPage:async()=>state.page,close:state.close});
   state.close.mockReset().mockResolvedValue(undefined);
 });
@@ -32,7 +32,7 @@ test('schema errors do not retry and browser closes',async()=>{
   expect(state.launch).toHaveBeenCalledOnce();expect(state.close).toHaveBeenCalledOnce();
 });
 test('credential failure is not retried',async()=>{
-  state.page.waitForFunction.mockResolvedValue({jsonValue:async()=> 'rejected'});
+  state.page.waitForFunction.mockResolvedValue({jsonValue:async()=> 'rejected',dispose:async()=>{}});
   await expect(fetchPortalLectures()).rejects.toThrow('authentication failed');
   expect(state.launch).toHaveBeenCalledOnce();expect(state.close).toHaveBeenCalledOnce();
 });
@@ -41,4 +41,22 @@ test.each(['Portal HTTP 503','Portal HTTP 429','Navigation timeout','net::ERR_CO
 });
 test.each(['Portal HTTP 403','Portal schema error','Portal authentication failed'])('does not retry %s',message=>{
   expect(isRetriablePortalError(new Error(message))).toBe(false);
+});
+
+test('native credential dialog fails immediately and cancels the pending DOM wait', async () => {
+  let signal: AbortSignal | undefined;
+  state.page.waitForFunction.mockImplementation((_fn, options) => {
+    signal = options.signal;
+    return new Promise((_resolve, reject) => signal!.addEventListener('abort', () => reject(new Error('aborted'))));
+  });
+  const dismiss = vi.fn().mockResolvedValue(undefined);
+  state.page.click.mockImplementation(async () => {
+    const handler = state.page.on.mock.calls.find(call => call[0] === 'dialog')![1];
+    await handler({dismiss});
+  });
+  await expect(fetchPortalLectures()).rejects.toThrow('Portal authentication failed');
+  expect(signal?.aborted).toBe(true);
+  expect(dismiss).toHaveBeenCalledOnce();
+  expect(state.launch).toHaveBeenCalledOnce();
+  expect(state.close).toHaveBeenCalledOnce();
 });

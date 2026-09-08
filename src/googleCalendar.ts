@@ -215,13 +215,21 @@ export async function syncGoogleCalendar(lectures: Lecture[], range: SyncRange =
   });
 
   // Compare only events wholly inside the same window, before any mutation.
-  if (remoteEvents.length && !events.length) {
-    throw new Error('Destructive sync blocked: empty replacement for existing events');
+  function guardCounts(remoteCount: number, localCount: number) {
+    if (remoteCount && !localCount) {
+      throw new Error('Destructive sync blocked: empty replacement for existing events');
+    }
+    if (remoteCount - localCount >= 5 && localCount < remoteCount / 2) {
+      throw new Error('Destructive sync blocked: event count dropped by more than half');
+    }
   }
-  const loss = remoteEvents.length - events.length;
-  if (loss >= 5 && events.length < remoteEvents.length / 2) {
-    throw new Error('Destructive sync blocked: event count dropped by more than half');
-  }
+  guardCounts(remoteEvents.length, events.length);
+  // Semester history must not hide an abnormal loss of upcoming classes.
+  const now = Date.now();
+  guardCounts(
+    remoteEvents.filter(event => Date.parse(event.end!.dateTime!) > now).length,
+    events.filter(event => Date.parse(event.end.dateTime) > now).length,
+  );
 
   const inserted = await upsertEvents(changedEvents, remoteById);
   const deleted = await deleteStaleEvents(remoteEvents, events);

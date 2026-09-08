@@ -28,7 +28,7 @@ function install(items: unknown[], handler?: (url: string, init: RequestInit) =>
   }));
 }
 beforeEach(() => { state.events = [event]; mutations = []; });
-afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); vi.useRealTimers(); });
 test('creates deterministic events, then skips unchanged events (also UTC timestamps)', async () => {
   const items: unknown[] = [];
   install(items, (_url, init) => { items.push(JSON.parse(String(init.body))); return json({}); });
@@ -113,4 +113,27 @@ test('unmanaged ID collision is never overwritten', async () => {
   }));
   await expect(syncGoogleCalendar([],range)).rejects.toThrow('unmanaged');
   expect(mutations).toEqual(['POST']);
+});
+
+test.each([0, 1])('semester history cannot mask a drop to %i upcoming events', async remaining => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2026-04-01T00:00:00+09:00'));
+  const history = Array.from({length:100}, (_,i) => ({...event, sourceKey:'history-'+i}));
+  const upcoming = Array.from({length:10}, (_,i) => ({
+    ...event, sourceKey:'future-'+i,
+    start:{...event.start,dateTime:'2026-04-02T09:00:00+09:00'},
+    end:{...event.end,dateTime:'2026-04-02T09:50:00+09:00'},
+  }));
+  state.events = [...history, ...upcoming.slice(0,remaining)];
+  install([...history,...upcoming].map(e => ({...remote(e.sourceKey),...e})));
+  await expect(syncGoogleCalendar([],range)).rejects.toThrow('Destructive sync blocked');
+  expect(mutations).toEqual([]);
+});
+
+test('completed semester history with no upcoming classes remains unchanged', async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2026-08-31T20:00:00+09:00'));
+  install([remote()]);
+  expect(await syncGoogleCalendar([],range)).toEqual({inserted:0,deleted:0});
+  expect(mutations).toEqual([]);
 });

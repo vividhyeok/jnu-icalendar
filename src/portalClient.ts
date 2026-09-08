@@ -14,10 +14,14 @@ export async function login(page: Page, username: string, password: string) {
   await page.type('#userId', username);
   await page.type('#userPswd', password);
   let rejected = false;
+  const controller = new AbortController();
+  let rejectLogin: (value: string) => void = () => {};
+  const rejection = new Promise<string>(resolve => { rejectLogin = resolve; });
   // Never log dialog text: the portal may echo account information.
   const dialogHandler = async (dialog: import('puppeteer').Dialog) => {
     rejected = true;
-    await dialog.dismiss();
+    rejectLogin('rejected');
+    await dialog.dismiss().catch(() => {});
   };
   page.on('dialog', dialogHandler);
   try {
@@ -28,15 +32,18 @@ export async function login(page: Page, username: string, password: string) {
       return location.origin === 'https://portal.jejunu.ac.kr'
         && location.pathname === '/index.htm'
         && !document.querySelector('#userPswd') ? 'authenticated' : false;
-    }, { timeout: 30_000 });
+    }, { timeout: 30_000, signal: controller.signal });
     // Attach rejection immediately so a failed click cannot leave an unhandled promise.
-    const checked = complete.catch(error => { throw error; });
+    const checked = Promise.race([complete.then(async handle => {
+      try { return await handle.jsonValue(); } finally { await handle.dispose(); }
+    }), rejection]);
     const [result] = await Promise.all([checked, page.click('button[type="submit"]')]);
-    if (await result.jsonValue() === 'rejected') { rejected = true; throw new Error('Login rejected'); }
+    if (result === 'rejected') { rejected = true; throw new Error('Login rejected'); }
   } catch (error) {
     if (rejected) throw new Error('Portal authentication failed. Check PORTAL_USERNAME/PASSWORD or required account verification.');
     throw error;
   } finally {
+    controller.abort();
     page.off('dialog', dialogHandler);
   }
 }
