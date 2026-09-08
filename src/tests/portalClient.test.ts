@@ -4,12 +4,14 @@ const state = vi.hoisted(() => ({
   page: {
     goto: vi.fn(),
     waitForSelector: vi.fn(),
+    waitForNavigation: vi.fn(),
     type: vi.fn(),
     on: vi.fn(),
     off: vi.fn(),
     click: vi.fn(),
     evaluate: vi.fn(),
     setDefaultTimeout: vi.fn(),
+    url: vi.fn(),
   },
   close: vi.fn(),
   launch: vi.fn(),
@@ -43,9 +45,11 @@ beforeEach(() => {
 
   state.page.goto.mockResolvedValue({});
   state.page.waitForSelector.mockResolvedValue(undefined);
+  state.page.waitForNavigation.mockResolvedValue({});
   state.page.type.mockResolvedValue(undefined);
   state.page.click.mockResolvedValue(undefined);
   state.page.evaluate.mockResolvedValue(response(VALID_PAYLOAD));
+  state.page.url.mockReturnValue('https://portal.jejunu.ac.kr/index.htm');
 });
 
 afterEach(() => {
@@ -53,11 +57,25 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test('uses one browser page and timetable API response as authentication source of truth', async () => {
+test('uses one browser page and verifies SSO index before timetable API', async () => {
   expect(await fetchPortalLectures()).toEqual([]);
   expect(state.newPage).toHaveBeenCalledOnce();
   expect(state.page.goto).toHaveBeenCalledOnce();
+  expect(state.page.waitForNavigation).toHaveBeenCalledOnce();
   expect(state.page.evaluate).toHaveBeenCalledOnce();
+  expect(state.page.waitForNavigation.mock.invocationCallOrder[0])
+    .toBeLessThan(state.page.click.mock.invocationCallOrder[0]);
+  expect(state.page.evaluate.mock.invocationCallOrder[0])
+    .toBeGreaterThan(state.page.click.mock.invocationCallOrder[0]);
+  expect(state.close).toHaveBeenCalledOnce();
+});
+
+test('does not call timetable API when SSO navigation does not reach portal index', async () => {
+  state.page.url.mockReturnValue('https://portal.jejunu.ac.kr/login.htm');
+
+  await expect(fetchPortalLectures()).rejects.toThrow('Portal authentication failed');
+  expect(state.page.waitForNavigation).toHaveBeenCalledOnce();
+  expect(state.page.evaluate).not.toHaveBeenCalled();
   expect(state.close).toHaveBeenCalledOnce();
 });
 
@@ -75,12 +93,33 @@ test('informational login dialog is dismissed and does not fail authentication',
   expect(state.close).toHaveBeenCalledOnce();
 });
 
-test('navigation timeout is tolerated when login form is already rendered', async () => {
+test('initial navigation timeout is tolerated when login form is already rendered', async () => {
   state.page.goto.mockRejectedValueOnce(new Error('Navigation timeout of 15000 ms exceeded'));
 
   expect(await fetchPortalLectures()).toEqual([]);
   expect(state.page.waitForSelector).toHaveBeenCalledTimes(2);
+  expect(state.page.waitForNavigation).toHaveBeenCalledOnce();
   expect(state.page.evaluate).toHaveBeenCalledOnce();
+});
+
+test('SSO navigation bookkeeping timeout is tolerated only when portal index was reached', async () => {
+  state.page.waitForNavigation.mockImplementationOnce(() => new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Navigation timeout of 30000 ms exceeded')), 0);
+  }));
+
+  expect(await fetchPortalLectures()).toEqual([]);
+  expect(state.page.evaluate).toHaveBeenCalledOnce();
+});
+
+test('SSO navigation timeout away from portal index remains a failure', async () => {
+  state.page.url.mockReturnValue('https://sso.jejunu.ac.kr/login.html');
+  state.page.waitForNavigation.mockImplementationOnce(() => new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Navigation timeout of 30000 ms exceeded')), 0);
+  }));
+
+  await expect(fetchPortalLectures()).rejects.toThrow('Navigation timeout');
+  expect(state.page.evaluate).not.toHaveBeenCalled();
+  expect(state.close).toHaveBeenCalledOnce();
 });
 
 test('temporary login-page response is retried until timetable JSON appears', async () => {
