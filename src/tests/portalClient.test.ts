@@ -1,17 +1,14 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({
-  loginPage: {
+  page: {
     goto: vi.fn(),
     waitForSelector: vi.fn(),
     type: vi.fn(),
     on: vi.fn(),
     off: vi.fn(),
     click: vi.fn(),
-    setDefaultTimeout: vi.fn(),
-  },
-  timetablePage: {
-    goto: vi.fn(),
+    evaluate: vi.fn(),
     setDefaultTimeout: vi.fn(),
   },
   close: vi.fn(),
@@ -31,31 +28,24 @@ const VALID_PAYLOAD = '{"classTables":[]}';
 const LOGIN_HTML = '<!doctype html><html><form action="/login.htm"><input id="userId"><input id="userPswd"></form></html>';
 
 function response(text: string, options: { status?: number; url?: string } = {}) {
-  const status = options.status ?? 200;
   return {
-    ok: () => status >= 200 && status < 300,
-    status: () => status,
-    url: () => options.url ?? TIMETABLE_URL,
-    text: async () => text,
+    status: options.status ?? 200,
+    url: options.url ?? TIMETABLE_URL,
+    text,
   };
 }
 
 beforeEach(() => {
-  for (const page of [state.loginPage, state.timetablePage]) {
-    Object.values(page).forEach(fn => fn.mockReset());
-  }
-
+  Object.values(state.page).forEach(fn => fn.mockReset());
   state.close.mockReset().mockResolvedValue(undefined);
-  state.newPage.mockReset()
-    .mockResolvedValueOnce(state.loginPage)
-    .mockResolvedValueOnce(state.timetablePage);
+  state.newPage.mockReset().mockResolvedValue(state.page);
   state.launch.mockReset().mockResolvedValue({ newPage: state.newPage, close: state.close });
 
-  state.loginPage.goto.mockResolvedValue({});
-  state.loginPage.waitForSelector.mockResolvedValue(undefined);
-  state.loginPage.type.mockResolvedValue(undefined);
-  state.loginPage.click.mockResolvedValue(undefined);
-  state.timetablePage.goto.mockResolvedValue(response(VALID_PAYLOAD));
+  state.page.goto.mockResolvedValue({});
+  state.page.waitForSelector.mockResolvedValue(undefined);
+  state.page.type.mockResolvedValue(undefined);
+  state.page.click.mockResolvedValue(undefined);
+  state.page.evaluate.mockResolvedValue(response(VALID_PAYLOAD));
 });
 
 afterEach(() => {
@@ -63,17 +53,18 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test('valid timetable API response is the authentication source of truth', async () => {
+test('uses one browser page and timetable API response as authentication source of truth', async () => {
   expect(await fetchPortalLectures()).toEqual([]);
-  expect(state.loginPage.goto).toHaveBeenCalledOnce();
-  expect(state.timetablePage.goto).toHaveBeenCalledOnce();
+  expect(state.newPage).toHaveBeenCalledOnce();
+  expect(state.page.goto).toHaveBeenCalledOnce();
+  expect(state.page.evaluate).toHaveBeenCalledOnce();
   expect(state.close).toHaveBeenCalledOnce();
 });
 
 test('informational login dialog is dismissed and does not fail authentication', async () => {
   const dismiss = vi.fn().mockResolvedValue(undefined);
-  state.loginPage.click.mockImplementation(async () => {
-    const handler = state.loginPage.on.mock.calls.find(call => call[0] === 'dialog')?.[1];
+  state.page.click.mockImplementation(async () => {
+    const handler = state.page.on.mock.calls.find(call => call[0] === 'dialog')?.[1];
     expect(handler).toBeTypeOf('function');
     handler({ dismiss });
     await Promise.resolve();
@@ -84,9 +75,17 @@ test('informational login dialog is dismissed and does not fail authentication',
   expect(state.close).toHaveBeenCalledOnce();
 });
 
+test('navigation timeout is tolerated when login form is already rendered', async () => {
+  state.page.goto.mockRejectedValueOnce(new Error('Navigation timeout of 15000 ms exceeded'));
+
+  expect(await fetchPortalLectures()).toEqual([]);
+  expect(state.page.waitForSelector).toHaveBeenCalledTimes(2);
+  expect(state.page.evaluate).toHaveBeenCalledOnce();
+});
+
 test('temporary login-page response is retried until timetable JSON appears', async () => {
   vi.useFakeTimers();
-  state.timetablePage.goto
+  state.page.evaluate
     .mockResolvedValueOnce(response(LOGIN_HTML, { url: 'https://portal.jejunu.ac.kr/login.htm' }))
     .mockResolvedValueOnce(response(VALID_PAYLOAD));
 
@@ -95,13 +94,29 @@ test('temporary login-page response is retried until timetable JSON appears', as
   await vi.runAllTimersAsync();
 
   await expect(promise).resolves.toEqual([]);
-  expect(state.timetablePage.goto).toHaveBeenCalledTimes(2);
+  expect(state.page.evaluate).toHaveBeenCalledTimes(2);
   expect(state.close).toHaveBeenCalledOnce();
+});
+
+test('transient execution-context replacement is retried in the same browser session', async () => {
+  vi.useFakeTimers();
+  state.page.evaluate
+    .mockRejectedValueOnce(new Error('Execution context was destroyed, most likely because of a navigation.'))
+    .mockResolvedValueOnce(response(VALID_PAYLOAD));
+
+  const promise = fetchPortalLectures();
+  await Promise.resolve();
+  await vi.runAllTimersAsync();
+
+  await expect(promise).resolves.toEqual([]);
+  expect(state.launch).toHaveBeenCalledOnce();
+  expect(state.newPage).toHaveBeenCalledOnce();
+  expect(state.page.evaluate).toHaveBeenCalledTimes(2);
 });
 
 test('persistent login-page response becomes a non-retriable authentication failure', async () => {
   vi.useFakeTimers();
-  state.timetablePage.goto.mockResolvedValue(response(LOGIN_HTML, {
+  state.page.evaluate.mockResolvedValue(response(LOGIN_HTML, {
     url: 'https://portal.jejunu.ac.kr/login.htm',
   }));
 
@@ -115,21 +130,21 @@ test('persistent login-page response becomes a non-retriable authentication fail
 });
 
 test('HTTP 403 is an authentication failure without retrying', async () => {
-  state.timetablePage.goto.mockResolvedValue(response('', { status: 403 }));
+  state.page.evaluate.mockResolvedValue(response('', { status: 403 }));
   await expect(fetchPortalLectures()).rejects.toThrow('Portal authentication failed');
   expect(state.launch).toHaveBeenCalledOnce();
   expect(state.close).toHaveBeenCalledOnce();
 });
 
 test('non-login malformed payload is not mislabeled as authentication failure', async () => {
-  state.timetablePage.goto.mockResolvedValue(response('definitely-not-json'));
+  state.page.evaluate.mockResolvedValue(response('definitely-not-json'));
   await expect(fetchPortalLectures()).rejects.toThrow('Portal timetable response is not valid JSON');
   expect(state.launch).toHaveBeenCalledOnce();
   expect(state.close).toHaveBeenCalledOnce();
 });
 
 test('schema errors do not retry and browser closes', async () => {
-  state.timetablePage.goto.mockResolvedValue(response('{}'));
+  state.page.evaluate.mockResolvedValue(response('{}'));
   await expect(fetchPortalLectures()).rejects.toThrow('schema');
   expect(state.launch).toHaveBeenCalledOnce();
   expect(state.close).toHaveBeenCalledOnce();
@@ -141,6 +156,7 @@ test.each([
   'Navigation timeout',
   'network failure',
   'fetch failed',
+  'Failed to fetch',
   'net::ERR_CONNECTION_RESET',
 ])('retries transient %s', message => {
   expect(isRetriablePortalError(new Error(message))).toBe(true);
