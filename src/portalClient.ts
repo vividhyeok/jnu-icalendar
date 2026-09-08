@@ -1,4 +1,4 @@
-import puppeteer, { type Dialog, type Page } from 'puppeteer';
+import puppeteer, { type Dialog, type HTTPResponse, type Page } from 'puppeteer';
 import { readConfig } from './env';
 import { parsePortalResponse, type Lecture } from './response';
 import { withRetry } from './retry';
@@ -9,6 +9,7 @@ const TIMETABLE_ENDPOINT = 'https://portal.jejunu.ac.kr/api/patis/timeTable.jsp'
 const AUTH_FAILURE = 'Portal authentication failed. Check PORTAL_USERNAME/PASSWORD or required account verification.';
 const AUTH_VERIFY_ATTEMPTS = 12;
 const AUTH_VERIFY_DELAY_MS = 750;
+const SSO_NAVIGATION_TIMEOUT_MS = 30_000;
 
 const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
@@ -119,9 +120,44 @@ function isTransientPageContextError(error: unknown) {
   return /execution context was destroyed|cannot find context|frame was detached|target closed|protocol error/i.test(message);
 }
 
+function isPortalIndexUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname === 'portal.jejunu.ac.kr' && parsed.pathname === '/index.htm';
+  } catch {
+    return false;
+  }
+}
+
+const SSO_STAGE_PATHS = new Set([
+  '/login.htm',
+  '/sso/ssoLogin.jsp',
+  '/authentication/issacweb/loginProcess',
+  '/sso/checkauth.jsp',
+  '/sso/agentProc.jsp',
+  '/index.htm',
+]);
+
 /**
- * Submit the portal login form only. The UI/redirect itself is deliberately not
- * treated as proof of authentication; the timetable API verifies the session.
+ * Emit only host/path/status for the known SSO chain observed in a normal login.
+ * Query strings, request bodies, cookies and response bodies are intentionally
+ * excluded because they may contain credentials or authentication tokens.
+ */
+function logSsoStage(response: HTTPResponse) {
+  try {
+    const url = new URL(response.url());
+    if (!['portal.jejunu.ac.kr', 'sso.jejunu.ac.kr'].includes(url.hostname)) return;
+    if (!SSO_STAGE_PATHS.has(url.pathname)) return;
+    console.info('Portal SSO stage: ' + url.hostname + url.pathname + ' -> ' + response.status());
+  } catch {
+    // Ignore malformed/unexpected URLs in diagnostic logging.
+  }
+}
+
+/**
+ * Submit the portal login form and wait for the real SSO completion signal.
+ * The JNU flow performs several iframe/form posts after the click and only
+ * establishes the portal session when the top-level page reaches /index.htm.
  */
 export async function login(page: Page, username: string, password: string) {
   console.info('Portal login page opening');
@@ -142,14 +178,36 @@ export async function login(page: Page, username: string, password: string) {
 
   await page.type('#userId', username);
   await page.type('#userPswd', password);
+
+  // Register the top-level navigation wait before clicking so a fast SSO redirect
+  // cannot race past Puppeteer. iframe navigations do not satisfy this wait.
+  const navigationPromise = page.waitForNavigation({
+    waitUntil: 'domcontentloaded',
+    timeout: SSO_NAVIGATION_TIMEOUT_MS,
+  });
+
   await page.click('button[type="submit"]');
-  console.info('Portal login submit clicked');
+  console.info('Portal login submit clicked; waiting for SSO completion');
+
+  try {
+    await navigationPromise;
+  } catch (error) {
+    // If navigation completed but Puppeteer's lifecycle bookkeeping timed out,
+    // trust the final top-level URL. Otherwise the session was not established.
+    if (!isNavigationTimeout(error) || !isPortalIndexUrl(page.url())) throw error;
+    console.warn('Portal SSO navigation wait timed out after reaching /index.htm');
+  }
+
+  if (!isPortalIndexUrl(page.url())) {
+    throw new Error(AUTH_FAILURE);
+  }
+
+  console.info('Portal SSO completed at /index.htm');
 }
 
 /**
  * Verify the authenticated browser session using same-origin fetch from the
- * existing login page. This keeps hidden-iframe SSO work alive and avoids a
- * second Puppeteer Page / navigation target in constrained Cloud Run jobs.
+ * authenticated portal page.
  */
 export async function fetchTimetableFromPage(page: Page, range: SyncRange): Promise<Lecture[]> {
   const url = timetableUrl(range);
@@ -177,9 +235,6 @@ export async function fetchTimetableFromPage(page: Page, range: SyncRange): Prom
         }))).finally(() => clearTimeout(timeout));
       }, url);
     } catch (error) {
-      // The top-level portal can redirect while the hidden SSO frame is finishing.
-      // If that destroys the JS execution context, wait briefly and try again in
-      // the new context without restarting the whole browser/session.
       if (isTransientPageContextError(error) && attempt < AUTH_VERIFY_ATTEMPTS) {
         await sleep(AUTH_VERIFY_DELAY_MS);
         continue;
@@ -207,9 +262,6 @@ export async function fetchTimetableFromPage(page: Page, range: SyncRange): Prom
 
     const json = parseJson(response.text);
 
-    // A valid JSON response without classTables is commonly the SSO/session
-    // handshake response, not timetable data. Give the hidden login flow a short
-    // bounded window to finish instead of misreporting it as a schema failure.
     if (isJsonSessionPending(json)) {
       if (attempt === 1) console.info('Portal timetable API session not ready; polling');
       if (attempt === AUTH_VERIFY_ATTEMPTS) {
@@ -253,14 +305,14 @@ export async function fetchPortalLectures(range: SyncRange = getSyncRange()): Pr
       page.setDefaultTimeout(30_000);
       console.info('Portal page created');
 
-      // Informational dialogs must not decide authentication. Dismiss them without
-      // logging their text because portal dialogs may contain account information.
       const dialogHandler = (dialog: Dialog) => { void dialog.dismiss().catch(() => {}); };
+      const responseHandler = (response: HTTPResponse) => { logSsoStage(response); };
       page.on('dialog', dialogHandler);
+      page.on('response', responseHandler);
 
       try {
         await login(page, username, password);
-        console.info('Portal login form submitted');
+        console.info('Portal login flow completed');
 
         const lectures = await fetchTimetableFromPage(page, range);
         if (lectures.some(row => row.lsnYmd < range.start || row.lsnYmd > range.end)) {
@@ -271,6 +323,7 @@ export async function fetchPortalLectures(range: SyncRange = getSyncRange()): Pr
         return lectures;
       } finally {
         page.off('dialog', dialogHandler);
+        page.off('response', responseHandler);
       }
     } finally {
       await browser.close();
