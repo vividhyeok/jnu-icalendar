@@ -1,29 +1,48 @@
-// Offline regression for the real Puppeteer/Chrome path, run inside the image.
+// Offline regression for the built production image.
+// Unit tests cover login form interactions; this smoke test focuses on the
+// real Puppeteer/Chrome runtime plus the timetable-API verification path.
 import puppeteer from 'puppeteer';
 import { createRequire } from 'node:module';
+
 const require = createRequire(import.meta.url);
-const { login } = require('../dist/portalClient.js');
-const browser = await puppeteer.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+const { fetchTimetableFromPage } = require('../dist/portalClient.js');
+
+const browser = await puppeteer.launch({
+  headless: true,
+  args: ['--no-sandbox', '--disable-dev-shm-usage'],
+});
+
 try {
   const page = await browser.newPage();
   await page.setRequestInterception(true);
+
   page.on('request', request => {
     const url = new URL(request.url());
-    if (url.pathname === '/login.htm') {
-      void request.respond({contentType:'text/html',body:
-        '<form action="/login-result" method="post" target="receiver"><input id="userId" name="userId"><input id="userPswd" name="userPswd"><button type="submit">Login</button></form><iframe name="receiver"></iframe>'});
-    } else if (url.pathname === '/login-result') {
-      void request.respond({contentType:'text/html',body:'<script>parent.location="/index.htm"</script>'});
-    } else if (url.pathname === '/index.htm') {
-      void request.respond({contentType:'text/html',body:'<h1>Authenticated fixture</h1><img src="/never-finishes">'});
-    } else if (url.pathname !== '/never-finishes') {
-      void request.abort();
+
+    if (url.pathname === '/api/patis/timeTable.jsp') {
+      void request.respond({
+        status: 200,
+        contentType: 'application/json',
+        body: '{"classTables":[]}',
+      });
+      return;
     }
-    // Deliberately keep an image request pending: network idle must not be required.
+
+    void request.abort();
   });
-  await login(page,'fixture-user','fixture-password');
-  if (page.url() !== 'https://portal.jejunu.ac.kr/index.htm') throw new Error('Login fixture failed');
-  console.info('Chrome iframe SSO smoke test passed without network idle');
+
+  const lectures = await fetchTimetableFromPage(page, {
+    start: '20260901',
+    end: '20260930',
+    timeMin: '2026-09-01T00:00:00+09:00',
+    timeMax: '2026-10-01T00:00:00+09:00',
+  });
+
+  if (!Array.isArray(lectures) || lectures.length !== 0) {
+    throw new Error('Timetable API verification fixture failed');
+  }
+
+  console.info('Chrome timetable API verification smoke test passed');
 } finally {
   await browser.close();
 }
