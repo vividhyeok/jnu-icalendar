@@ -7,6 +7,7 @@ const { login, fetchTimetableFromPage } = require('../dist/portalClient.js');
 
 const browser = await puppeteer.launch({
   headless: true,
+  protocolTimeout: 45_000,
   args: ['--no-sandbox', '--disable-dev-shm-usage'],
 });
 
@@ -27,7 +28,8 @@ async function installFixture(page) {
           '<input id="userId" name="userId">' +
           '<input id="userPswd" name="userPswd">' +
           '<button type="submit">Login</button>' +
-          '</form><iframe name="receiver"></iframe>',
+          '</form>' +
+          '<iframe name="receiver"></iframe>',
       });
       return;
     }
@@ -36,7 +38,7 @@ async function installFixture(page) {
       authenticated = true;
       void request.respond({
         contentType: 'text/html',
-        body: '<script>alert("informational notice");parent.location="/landing.htm"</script>',
+        body: '<script>parent.location="/landing.htm"</script>',
       });
       return;
     }
@@ -74,13 +76,9 @@ async function installFixture(page) {
 await installFixture(loginPage);
 await installFixture(timetablePage);
 
-const dialogHandler = dialog => {
-  void dialog.dismiss().catch(() => {});
-};
-loginPage.on('dialog', dialogHandler);
-
 try {
   await login(loginPage, 'fixture-user', 'fixture-password');
+
   const lectures = await fetchTimetableFromPage(timetablePage, {
     start: '20260901',
     end: '20260930',
@@ -92,8 +90,11 @@ try {
     throw new Error('Timetable verification fixture failed');
   }
 
+  if (loginPage.url() === 'https://portal.jejunu.ac.kr/index.htm') {
+    throw new Error('Smoke fixture unexpectedly depends on /index.htm');
+  }
+
   console.info('Chrome iframe SSO smoke test passed using timetable API verification');
 } finally {
-  loginPage.off('dialog', dialogHandler);
   await browser.close();
 }
