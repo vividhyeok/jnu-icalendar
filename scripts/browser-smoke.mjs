@@ -1,6 +1,6 @@
 // Offline regression for the built production image.
-// Unit tests cover login form interactions; this smoke test focuses on the
-// real Puppeteer/Chrome runtime plus the timetable-API verification path.
+// This verifies the real Puppeteer/Chrome runtime plus same-origin timetable
+// verification from a single browser page without contacting the real portal.
 import puppeteer from 'puppeteer';
 import { createRequire } from 'node:module';
 
@@ -19,6 +19,15 @@ try {
   page.on('request', request => {
     const url = new URL(request.url());
 
+    if (url.pathname === '/fixture') {
+      void request.respond({
+        status: 200,
+        contentType: 'text/html',
+        body: '<!doctype html><html><body>fixture</body></html>',
+      });
+      return;
+    }
+
     if (url.pathname === '/api/patis/timeTable.jsp') {
       void request.respond({
         status: 200,
@@ -29,6 +38,12 @@ try {
     }
 
     void request.abort();
+  });
+
+  // Put the page on the real portal origin so browser fetch() is same-origin.
+  await page.goto('https://portal.jejunu.ac.kr/fixture', {
+    waitUntil: 'domcontentloaded',
+    timeout: 10_000,
   });
 
   const lectures = await fetchTimetableFromPage(page, {
@@ -42,7 +57,7 @@ try {
     throw new Error('Timetable API verification fixture failed');
   }
 
-  console.info('Chrome timetable API verification smoke test passed');
+  console.info('Chrome single-page timetable API verification smoke test passed');
 } finally {
   await browser.close();
 }
