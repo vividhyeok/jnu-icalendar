@@ -6,8 +6,8 @@ export function readConfig(env = process.env) {
     if (!env[key]?.trim()) throw new Error('Missing environment variable: ' + key);
   }
   return {
-    username: env.PORTAL_USERNAME!,
-    password: env.PORTAL_PASSWORD!,
+    username: env.PORTAL_USERNAME!.trim(),
+    password: env.PORTAL_PASSWORD!.trim(),
     calendarId: env.GOOGLE_CALENDAR_ID!.trim(),
   };
 }
