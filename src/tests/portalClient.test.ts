@@ -111,15 +111,15 @@ test('SSO navigation bookkeeping timeout is tolerated only when portal index was
   expect(state.page.evaluate).toHaveBeenCalledOnce();
 });
 
-test('SSO navigation timeout away from portal index remains a failure', async () => {
+test('SSO navigation timeout away from portal index never reaches timetable API', async () => {
   state.page.url.mockReturnValue('https://sso.jejunu.ac.kr/login.html');
   state.page.waitForNavigation.mockImplementationOnce(() => new Promise((_, reject) => {
     setTimeout(() => reject(new Error('Navigation timeout of 30000 ms exceeded')), 0);
   }));
 
-  await expect(fetchPortalLectures()).rejects.toThrow('Navigation timeout');
+  await expect(fetchPortalLectures()).rejects.toThrow('Portal authentication failed');
   expect(state.page.evaluate).not.toHaveBeenCalled();
-  expect(state.close).toHaveBeenCalledOnce();
+  expect(state.close).toHaveBeenCalledTimes(2);
 });
 
 test('temporary login-page response is retried until timetable JSON appears', async () => {
