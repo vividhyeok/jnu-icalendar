@@ -97,26 +97,23 @@ export async function fetchTimetableFromPage(page: Page, range: SyncRange): Prom
     let response: BrowserFetchResponse;
 
     try {
-      response = await page.evaluate(async targetUrl => {
+      // Deliberately avoid an async callback here. This function is serialized and
+      // executed inside Chrome; downlevel TypeScript async helpers such as __awaiter
+      // do not exist in the page context.
+      response = await page.evaluate(targetUrl => {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 15_000);
 
-        try {
-          const result = await fetch(targetUrl, {
-            credentials: 'include',
-            cache: 'no-store',
-            redirect: 'follow',
-            signal: controller.signal,
-          });
-
-          return {
-            status: result.status,
-            url: result.url,
-            text: await result.text(),
-          };
-        } finally {
-          clearTimeout(timeout);
-        }
+        return fetch(targetUrl, {
+          credentials: 'include',
+          cache: 'no-store',
+          redirect: 'follow',
+          signal: controller.signal,
+        }).then(result => result.text().then(text => ({
+          status: result.status,
+          url: result.url,
+          text,
+        }))).finally(() => clearTimeout(timeout));
       }, url);
     } catch (error) {
       // The top-level portal can redirect while the hidden SSO frame is finishing.
